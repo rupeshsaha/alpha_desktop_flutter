@@ -2,37 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../layout/teacher_layout.dart';
+import '../layout/student_layout.dart';
 import '../core/utils/snackbar_helper.dart';
 
-class StudentViewPage extends StatefulWidget {
-  final int studentId;
-
-  const StudentViewPage({super.key, required this.studentId});
+class MyProfilePage extends StatefulWidget {
+  const MyProfilePage({super.key});
 
   @override
-  State<StudentViewPage> createState() => _StudentViewPageState();
+  State<MyProfilePage> createState() => _MyProfilePageState();
 }
 
-class _StudentViewPageState extends State<StudentViewPage> {
-  Map<String, dynamic>? _student;
+class _MyProfilePageState extends State<MyProfilePage> {
+  Map<String, dynamic>? _profile;
   bool _isLoading = true;
-  List<dynamic> _allBatches = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchStudentDetails();
-    _fetchBatches();
+    _fetchProfile();
   }
 
-  Future<void> _fetchStudentDetails() async {
+  Future<void> _fetchProfile() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
+    if (token == null) return;
 
     try {
       final response = await http.get(
-        Uri.parse('http://127.0.0.1:8000/api/students/${widget.studentId}'),
+        Uri.parse('http://127.0.0.1:8000/api/student/profile'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -42,14 +39,14 @@ class _StudentViewPageState extends State<StudentViewPage> {
       if (response.statusCode == 200) {
         if (mounted) {
           setState(() {
-            _student = jsonDecode(response.body);
+            _profile = jsonDecode(response.body);
             _isLoading = false;
           });
         }
       } else {
         if (mounted) {
           setState(() => _isLoading = false);
-          SnackbarHelper.showError(context, 'Failed to load student details.');
+          SnackbarHelper.showError(context, 'Failed to load profile.');
         }
       }
     } catch (e) {
@@ -58,224 +55,6 @@ class _StudentViewPageState extends State<StudentViewPage> {
         SnackbarHelper.showError(context, 'Network Error.');
       }
     }
-  }
-
-  Future<void> _fetchBatches() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    
-    try {
-      final response = await http.get(
-        Uri.parse('http://127.0.0.1:8000/api/batches'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        if (mounted) {
-          setState(() {
-            _allBatches = jsonDecode(response.body);
-          });
-        }
-      }
-    } catch (e) {
-      // Ignored
-    }
-  }
-
-  Future<void> _attachBatch(int batchId, String amountPaid, String transactionId, String paymentStatus) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-
-    try {
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/api/students/${widget.studentId}/batches'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'batch_id': batchId,
-          'amount_paid': amountPaid.isNotEmpty ? double.tryParse(amountPaid) : null,
-          'transaction_id': transactionId.isNotEmpty ? transactionId : null,
-          'status': paymentStatus,
-        }),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (mounted) {
-          SnackbarHelper.showSuccess(context, 'Batch enrolled successfully!');
-          _fetchStudentDetails();
-        }
-      } else {
-        if (mounted) {
-          SnackbarHelper.showError(context, 'Failed to enroll in batch.');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Network Error.');
-      }
-    }
-  }
-
-  void _showEnrollBatchModal() {
-    int? selectedBatchId;
-    final amountController = TextEditingController();
-    final transactionController = TextEditingController();
-    String paymentStatus = 'unpaid';
-    bool isSubmitting = false;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final theme = Theme.of(context);
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              child: Container(
-                width: 480,
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Enroll in Batch', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: IconButton(
-                            icon: const Icon(Icons.close, size: 20),
-                            onPressed: () => Navigator.pop(context),
-                            splashRadius: 20,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        labelText: 'Select Batch',
-                        prefixIcon: const Icon(Icons.class_outlined, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
-                      value: selectedBatchId,
-                      items: _allBatches.map((b) {
-                        return DropdownMenuItem<int>(
-                          value: b['id'] as int,
-                          child: Text(b['name']),
-                        );
-                      }).toList(),
-                      onChanged: (val) => setModalState(() => selectedBatchId = val),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: amountController,
-                            decoration: InputDecoration(
-                              labelText: 'Amount Paid',
-                              prefixIcon: const Icon(Icons.currency_rupee, size: 20),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            ),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              labelText: 'Payment Status',
-                              prefixIcon: const Icon(Icons.payment, size: 20),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            ),
-                            value: paymentStatus,
-                            items: const [
-                              DropdownMenuItem(value: 'paid', child: Text('Paid')),
-                              DropdownMenuItem(value: 'partial', child: Text('Partial')),
-                              DropdownMenuItem(value: 'unpaid', child: Text('Unpaid')),
-                            ],
-                            onChanged: (val) => setModalState(() => paymentStatus = val!),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: transactionController,
-                      decoration: InputDecoration(
-                        labelText: 'Transaction ID (Optional)',
-                        prefixIcon: const Icon(Icons.receipt_long_outlined, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: TextButton.styleFrom(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                              minimumSize: const Size(120, 54),
-                            ),
-                            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: ElevatedButton(
-                            onPressed: isSubmitting ? null : () async {
-                              if (selectedBatchId == null) {
-                                SnackbarHelper.showError(context, 'Please select a batch.');
-                                return;
-                              }
-                              setModalState(() => isSubmitting = true);
-                              await _attachBatch(
-                                selectedBatchId!,
-                                amountController.text,
-                                transactionController.text,
-                                paymentStatus,
-                              );
-                              if (context.mounted) Navigator.pop(context);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-                              minimumSize: const Size(140, 54),
-                            ),
-                            child: isSubmitting
-                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                                : const Text('Enroll', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   String _formatDate(String? isoDate) {
@@ -301,34 +80,23 @@ class _StudentViewPageState extends State<StudentViewPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return TeacherLayout(
-      title: 'Student Details',
+    return StudentLayout(
+      title: 'My Profile',
       child: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _student == null
-              ? const Center(child: Text('Student not found'))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
+          : _profile == null
+              ? const Center(child: Text('Could not load profile.'))
+              : Container(
+                  width: double.infinity,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(32),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Back button + Title
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Student Profile',
-                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
+                      const Text('My Profile', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 24),
-                      
-                      // Student Header Card
+
+                      // Profile Header
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
@@ -342,7 +110,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
                               radius: 36,
                               backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
                               child: Text(
-                                _student!['name'][0].toUpperCase(),
+                                (_profile!['name'] ?? 'S')[0].toUpperCase(),
                                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                               ),
                             ),
@@ -352,50 +120,41 @@ class _StudentViewPageState extends State<StudentViewPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    _student!['name'],
+                                    _profile!['name'] ?? 'Student',
                                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    _student!['email'],
+                                    _profile!['email'] ?? '',
                                     style: TextStyle(fontSize: 15, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                                   ),
-                                  if (_student!['registration_id'] != null) ...[
+                                  if (_profile!['registration_id'] != null) ...[
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Reg. ID: ${_student!['registration_id']}',
+                                      'Reg. ID: ${_profile!['registration_id']}',
                                       style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.5)),
                                     ),
                                   ],
                                 ],
                               ),
                             ),
-                            Builder(
-                              builder: (context) {
-                                final isActive = _student!['is_active'] == 1 || _student!['is_active'] == true;
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    isActive ? 'Active' : 'Inactive',
-                                    style: TextStyle(
-                                      color: isActive ? Colors.green : Colors.red,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                );
-                              }
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Active',
+                                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
-                      // Profile Details Grid
+
+                      // Personal Info Grid
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
@@ -420,12 +179,12 @@ class _StudentViewPageState extends State<StudentViewPage> {
                               builder: (context, constraints) {
                                 final isWide = constraints.maxWidth > 600;
                                 final items = [
-                                  _buildInfoItem(theme, "Father's Name", _student!['father_name'], Icons.family_restroom),
-                                  _buildInfoItem(theme, 'Phone', _student!['phone'], Icons.phone_outlined),
-                                  _buildInfoItem(theme, 'Date of Birth', _formatDate(_student!['dob']), Icons.cake_outlined),
-                                  _buildInfoItem(theme, 'Gender', _student!['gender'], Icons.person_outline),
-                                  _buildInfoItem(theme, 'Address', _student!['address'], Icons.location_on_outlined),
-                                  _buildInfoItem(theme, 'Joined', _formatDate(_student!['created_at']), Icons.calendar_today),
+                                  _buildInfoItem(theme, "Father's Name", _profile!['father_name'], Icons.family_restroom),
+                                  _buildInfoItem(theme, 'Phone', _profile!['phone'], Icons.phone_outlined),
+                                  _buildInfoItem(theme, 'Date of Birth', _formatDate(_profile!['dob']), Icons.cake_outlined),
+                                  _buildInfoItem(theme, 'Gender', _profile!['gender'], Icons.person_outline),
+                                  _buildInfoItem(theme, 'Address', _profile!['address'], Icons.location_on_outlined),
+                                  _buildInfoItem(theme, 'Member Since', _formatDate(_profile!['created_at']), Icons.calendar_today),
                                 ];
 
                                 if (isWide) {
@@ -440,7 +199,6 @@ class _StudentViewPageState extends State<StudentViewPage> {
                                                 if (j > i) const SizedBox(width: 16),
                                                 Expanded(child: items[j]),
                                               ],
-                                              // fill remaining if row incomplete
                                               if (i + 3 > items.length)
                                                 for (int k = 0; k < i + 3 - items.length; k++) ...[
                                                   const SizedBox(width: 16),
@@ -463,34 +221,13 @@ class _StudentViewPageState extends State<StudentViewPage> {
                           ],
                         ),
                       ),
-                      
                       const SizedBox(height: 32),
-                      
-                      // Enrolled Batches Section
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Enrolled Batches',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: ElevatedButton.icon(
-                              onPressed: _showEnrollBatchModal,
-                              icon: const Icon(Icons.add, size: 18),
-                              label: const Text('Enroll in Batch'),
-                              style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+
+                      // Enrolled Batches
+                      const Text('My Enrolled Batches', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
-                      
-                      if ((_student!['batches'] as List?)?.isEmpty ?? true)
+
+                      if ((_profile!['batches'] as List?)?.isEmpty ?? true)
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(32),
@@ -504,14 +241,13 @@ class _StudentViewPageState extends State<StudentViewPage> {
                               Icon(Icons.class_outlined, size: 48, color: theme.colorScheme.onSurface.withOpacity(0.15)),
                               const SizedBox(height: 12),
                               Text(
-                                'No batches enrolled yet.',
+                                'You are not enrolled in any batches.',
                                 style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 15),
                               ),
                             ],
                           ),
                         )
                       else
-                        // Batch Table
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
@@ -519,7 +255,7 @@ class _StudentViewPageState extends State<StudentViewPage> {
                           ),
                           child: Column(
                             children: [
-                              // Header
+                              // Table Header
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                                 decoration: BoxDecoration(
@@ -533,18 +269,18 @@ class _StudentViewPageState extends State<StudentViewPage> {
                                   children: [
                                     Expanded(flex: 3, child: Text('Batch Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
                                     Expanded(flex: 2, child: Text('Course', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                                    Expanded(flex: 2, child: Text('Amount Paid', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                                    Expanded(flex: 2, child: Text('Transaction ID', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                                    Expanded(flex: 2, child: Text('Schedule', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                                    Expanded(flex: 1, child: Text('Fee', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
                                     Expanded(flex: 1, child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.center)),
                                   ],
                                 ),
                               ),
                               // Rows
-                              ...(_student!['batches'] as List).asMap().entries.map((entry) {
+                              ...(_profile!['batches'] as List).asMap().entries.map((entry) {
                                 final index = entry.key;
                                 final batch = entry.value;
                                 final pivot = batch['pivot'];
-                                final isLast = index == (_student!['batches'] as List).length - 1;
+                                final isLast = index == (_profile!['batches'] as List).length - 1;
 
                                 return Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -587,15 +323,15 @@ class _StudentViewPageState extends State<StudentViewPage> {
                                       Expanded(
                                         flex: 2,
                                         child: Text(
-                                          pivot?['amount_paid'] != null ? '₹${pivot['amount_paid']}' : 'N/A',
-                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                          batch['schedule_time'] ?? 'N/A',
+                                          style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                                         ),
                                       ),
                                       Expanded(
-                                        flex: 2,
+                                        flex: 1,
                                         child: Text(
-                                          pivot?['transaction_id'] ?? '—',
-                                          style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                                          batch['fee'] != null ? '₹${batch['fee']}' : 'N/A',
+                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                                         ),
                                       ),
                                       Expanded(
@@ -628,13 +364,14 @@ class _StudentViewPageState extends State<StudentViewPage> {
                     ],
                   ),
                 ),
+              ),
     );
   }
 
   Widget _buildInfoItem(ThemeData theme, String label, dynamic value, IconData icon) {
     final displayValue = (value == null || value.toString().isEmpty) ? 'Not Provided' : value.toString();
     final bool hasValue = value != null && value.toString().isNotEmpty;
-    
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(

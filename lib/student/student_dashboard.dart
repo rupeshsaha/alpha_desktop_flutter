@@ -1,28 +1,113 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../layout/student_layout.dart';
+import '../core/utils/snackbar_helper.dart';
+import 'exams_page.dart';
 
-class StudentDashboard extends StatelessWidget {
+class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
+
+  @override
+  State<StudentDashboard> createState() => _StudentDashboardState();
+}
+
+class _StudentDashboardState extends State<StudentDashboard> {
+  bool _isLoading = true;
+  Map<String, dynamic>? _profile;
+  List<dynamic> _batches = [];
+  List<dynamic> _exams = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDashboardData();
+  }
+
+  Future<void> _fetchDashboardData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    if (token == null) return;
+
+    try {
+      // Fetch profile (which includes batches)
+      final profileRes = await http.get(
+        Uri.parse('http://127.0.0.1:8000/api/student/profile'),
+        headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
+      );
+
+      // Fetch exams
+      final examsRes = await http.get(
+        Uri.parse('http://127.0.0.1:8000/api/student/exams'),
+        headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
+      );
+
+      if (mounted) {
+        setState(() {
+          if (profileRes.statusCode == 200) {
+            _profile = jsonDecode(profileRes.body);
+            _batches = _profile?['batches'] ?? [];
+          }
+          if (examsRes.statusCode == 200) {
+            _exams = jsonDecode(examsRes.body);
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        SnackbarHelper.showError(context, 'Network error while loading dashboard.');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return StudentLayout(
       title: 'Student Dashboard',
-      child: _StudentDashboardContent(),
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _StudentDashboardContent(
+              profile: _profile,
+              batches: _batches,
+              exams: _exams,
+            ),
     );
   }
 }
 
 class _StudentDashboardContent extends StatelessWidget {
+  final Map<String, dynamic>? profile;
+  final List<dynamic> batches;
+  final List<dynamic> exams;
+
+  const _StudentDashboardContent({
+    required this.profile,
+    required this.batches,
+    required this.exams,
+  });
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isDesktop = MediaQuery.of(context).size.width > 800;
+
+    final completedExams = exams.where((e) => e['is_completed'] == true).toList();
+    final pendingExams = exams.where((e) => e['is_completed'] != true).toList();
+    
+    double avgPercentage = 0;
+    if (completedExams.isNotEmpty) {
+      avgPercentage = completedExams.fold<double>(0, (sum, e) => sum + (double.tryParse(e['percentage'].toString()) ?? 0)) / completedExams.length;
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Welcome Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -30,27 +115,23 @@ class _StudentDashboardContent extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Welcome back, Student!',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    Text(
+                      'Welcome back, ${profile?['name'] ?? 'Student'}!',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Ready to learn something new today?',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                      'Here is your learning overview.',
+                      style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('Resume Course'),
-              )
             ],
           ),
           const SizedBox(height: 32),
+
+          // Stat Cards
           LayoutBuilder(
             builder: (context, constraints) {
               final crossAxisCount = isDesktop ? 4 : 2;
@@ -59,32 +140,35 @@ class _StudentDashboardContent extends StatelessWidget {
                 spacing: 24,
                 runSpacing: 24,
                 children: [
-                  SizedBox(width: width, child: _buildStatCard(context, 'Enrolled Courses', '5', Icons.book, Colors.blue)),
-                  SizedBox(width: width, child: _buildStatCard(context, 'Completed Tasks', '12', Icons.task_alt, Colors.green)),
-                  SizedBox(width: width, child: _buildStatCard(context, 'Upcoming Deadlines', '2', Icons.timer, Colors.orange)),
-                  SizedBox(width: width, child: _buildStatCard(context, 'Average Grade', 'A-', Icons.grade, Colors.purple)),
+                  SizedBox(width: width, child: _buildStatCard(context, 'Enrolled Batches', '${batches.length}', Icons.class_, Colors.blue)),
+                  SizedBox(width: width, child: _buildStatCard(context, 'Exams Taken', '${completedExams.length}', Icons.task_alt, Colors.green)),
+                  SizedBox(width: width, child: _buildStatCard(context, 'Pending Exams', '${pendingExams.length}', Icons.timer, Colors.orange)),
+                  SizedBox(width: width, child: _buildStatCard(context, 'Avg. Score', completedExams.isEmpty ? 'N/A' : '${avgPercentage.toStringAsFixed(1)}%', Icons.trending_up, Colors.purple)),
                 ],
               );
             },
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
+
+          // Main content area
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Enrolled Batches
               Expanded(
                 flex: 7,
-                child: _buildActiveCourses(context),
+                child: _buildEnrolledBatches(context, theme),
               ),
-              if (isDesktop) const SizedBox(width: 32),
+              if (isDesktop) const SizedBox(width: 24),
               if (isDesktop)
                 Expanded(
                   flex: 4,
-                  child: _buildUpcomingAssignments(context),
+                  child: _buildUpcomingExams(context, theme),
                 ),
             ],
           ),
-          if (!isDesktop) const SizedBox(height: 32),
-          if (!isDesktop) _buildUpcomingAssignments(context),
+          if (!isDesktop) const SizedBox(height: 24),
+          if (!isDesktop) _buildUpcomingExams(context, theme),
         ],
       ),
     );
@@ -97,7 +181,6 @@ class _StudentDashboardContent extends StatelessWidget {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
@@ -113,13 +196,7 @@ class _StudentDashboardContent extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(value, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
               title,
@@ -135,7 +212,96 @@ class _StudentDashboardContent extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveCourses(BuildContext context) {
+  Widget _buildEnrolledBatches(BuildContext context, ThemeData theme) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('My Batches', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            if (batches.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'You are not enrolled in any batches yet.',
+                    style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                  ),
+                ),
+              )
+            else
+              ...batches.asMap().entries.map((entry) {
+                final index = entry.key;
+                final batch = entry.value;
+                final pivot = batch['pivot'];
+                
+                return Column(
+                  children: [
+                    if (index > 0) const Divider(height: 32),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.class_, color: theme.colorScheme.primary),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(batch['name'] ?? 'Unknown Batch', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                              const SizedBox(height: 4),
+                              if (batch['course'] != null)
+                                Text(
+                                  'Course: ${batch['course']['name']}',
+                                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 14),
+                                ),
+                              if (batch['schedule_time'] != null) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  batch['schedule_time'],
+                                  style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (pivot?['status'] != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(pivot['status']).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              (pivot['status'] as String).toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: _getStatusColor(pivot['status']),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpcomingExams(BuildContext context, ThemeData theme) {
+    final pendingExams = exams.where((e) => e['is_completed'] != true).toList();
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -145,133 +311,95 @@ class _StudentDashboardContent extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: const Text(
-                    'Active Courses',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                const Text('Upcoming Exams', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (_, __, ___) => const ExamsPage(),
+                        transitionDuration: Duration.zero,
+                        reverseTransitionDuration: Duration.zero,
+                      ),
+                    );
+                  },
+                  child: const Text('View All'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (pendingExams.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'No pending exams. You are all caught up!',
+                    style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
                   ),
                 ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('View All'),
-                )
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildCourseItem(context, 'Mathematics 101', 'Dr. Smith', 0.8),
-            const Divider(height: 32),
-            _buildCourseItem(context, 'Physics Advanced', 'Prof. Johnson', 0.45),
-            const Divider(height: 32),
-            _buildCourseItem(context, 'Computer Science Base', 'Dr. Lee', 0.15),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCourseItem(BuildContext context, String title, String instructor, double progress) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            Icons.menu_book,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-              const SizedBox(height: 4),
-              Text('Instructor: $instructor', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 14)),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: Theme.of(context).dividerColor.withOpacity(0.1),
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+              )
+            else
+              ...pendingExams.take(5).map((exam) {
+                bool isLocked = false;
+                if (exam['exam_date'] != null) {
+                  final today = DateTime.now();
+                  final examDate = DateTime.parse(exam['exam_date']);
+                  isLocked = DateTime(today.year, today.month, today.day).isBefore(DateTime(examDate.year, examDate.month, examDate.day));
+                }
+                final color = isLocked ? Colors.red : Colors.blue;
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.03),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withOpacity(0.15)),
                   ),
-                  const SizedBox(width: 16),
-                  Text('${(progress * 100).toInt()}%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUpcomingAssignments(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Upcoming Assignments',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
-            _buildAssignmentItem(context, 'Physics Lab Report', 'Due in 2 days', Colors.orange),
-            const SizedBox(height: 16),
-            _buildAssignmentItem(context, 'Math Chapter 4 Quiz', 'Due Tomorrow', Colors.red),
-            const SizedBox(height: 16),
-            _buildAssignmentItem(context, 'CS Project Proposal', 'Due Next Week', Colors.blue),
+                  child: Row(
+                    children: [
+                      Icon(isLocked ? Icons.lock : Icons.quiz, color: color, size: 22),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(exam['title'] ?? 'Exam', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                            const SizedBox(height: 4),
+                            Text(
+                              isLocked ? 'Locked until ${exam['exam_date']}' : 'Available Now',
+                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isLocked ? 'LOCKED' : 'READY',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAssignmentItem(BuildContext context, String title, String due, Color color) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? color.withOpacity(0.05) : color.withOpacity(0.02),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.assignment, color: color),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                const SizedBox(height: 4),
-                Text(due, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 12)),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              elevation: 0,
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-              side: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.2)),
-            ),
-            child: const Text('Submit'),
-          ),
-        ],
-      ),
-    );
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'paid': return Colors.green;
+      case 'partial': return Colors.orange;
+      case 'unpaid': return Colors.red;
+      default: return Colors.grey;
+    }
   }
 }

@@ -6,6 +6,7 @@ import '../layout/student_layout.dart';
 import '../core/utils/snackbar_helper.dart';
 import 'exam_taking_page.dart';
 import 'leaderboard_page.dart';
+import 'exam_answers_page.dart';
 
 class ExamsPage extends StatefulWidget {
   const ExamsPage({super.key});
@@ -40,7 +41,9 @@ class _ExamsPageState extends State<ExamsPage> {
 
       if (response.statusCode == 200) {
         setState(() {
-          _exams = jsonDecode(response.body);
+          final List<dynamic> fetchedExams = jsonDecode(response.body);
+          fetchedExams.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+          _exams = fetchedExams;
           _isLoading = false;
         });
       } else {
@@ -95,59 +98,90 @@ class _ExamsPageState extends State<ExamsPage> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        title: const Text('Enter Exam Password'),
-        content: TextField(
-          controller: pwdController,
-          obscureText: true,
-          decoration: InputDecoration(
-            hintText: 'Password',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.lock_outline, color: Theme.of(context).colorScheme.primary, size: 28),
+                  const SizedBox(width: 12),
+                  const Text('Enter Exam Password', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'This exam is password protected. Please enter the password provided by your teacher.',
+                style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: pwdController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  hintText: 'Password',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    ),
+                    child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (pwdController.text.isEmpty) return;
+                      final prefs = await SharedPreferences.getInstance();
+                      final token = prefs.getString('auth_token');
+
+                      try {
+                        final response = await http.post(
+                          Uri.parse('http://127.0.0.1:8000/api/student/exams/${exam["id"]}/verify'),
+                          headers: {
+                            'Authorization': 'Bearer $token',
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                          },
+                          body: jsonEncode({'password': pwdController.text}),
+                        );
+
+                        if (response.statusCode == 200) {
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            final data = jsonDecode(response.body);
+                            _navigateToExam(exam['id'], data['questions']);
+                          }
+                        } else {
+                          if (context.mounted) SnackbarHelper.showError(context, 'Invalid Password');
+                        }
+                      } catch (e) {
+                        if (context.mounted) SnackbarHelper.showError(context, 'Network Error');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Unlock', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (pwdController.text.isEmpty) return;
-              final prefs = await SharedPreferences.getInstance();
-              final token = prefs.getString('auth_token');
-
-              try {
-                final response = await http.post(
-                  Uri.parse('http://127.0.0.1:8000/api/student/exams/${exam["id"]}/verify'),
-                  headers: {
-                    'Authorization': 'Bearer $token',
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                  },
-                  body: jsonEncode({'password': pwdController.text}),
-                );
-
-                if (response.statusCode == 200) {
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    final data = jsonDecode(response.body);
-                    _navigateToExam(exam['id'], data['questions']);
-                  }
-                } else {
-                  if (context.mounted) SnackbarHelper.showError(context, 'Invalid Password');
-                }
-              } catch (e) {
-                if (context.mounted) SnackbarHelper.showError(context, 'Network Error');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Unlock'),
-          ),
-        ],
       ),
     );
   }
@@ -195,29 +229,20 @@ class _ExamsPageState extends State<ExamsPage> {
 
     return StudentLayout(
       title: 'Exams',
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              theme.colorScheme.primary.withOpacity(0.05),
-              Colors.purpleAccent.withOpacity(0.05),
-            ],
-          ),
-        ),
+      child: SizedBox(
+        width: double.infinity,
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _exams.isEmpty
                 ? const Center(child: Text('No exams available for your batches.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)))
                 : SingleChildScrollView(
-                    padding: const EdgeInsets.all(40),
+                    padding: const EdgeInsets.all(32),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Available Exams',
-                          style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -265,12 +290,12 @@ class _ExamsPageState extends State<ExamsPage> {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(color: theme.dividerColor.withOpacity(0.08)),
@@ -363,26 +388,77 @@ class _ExamsPageState extends State<ExamsPage> {
               ),
             ],
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () => _handleExamClick(exam),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isCompleted ? theme.colorScheme.surface : theme.colorScheme.primary,
-                  foregroundColor: isCompleted ? theme.colorScheme.primary : theme.colorScheme.onPrimary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: isCompleted ? BorderSide(color: theme.colorScheme.primary) : BorderSide.none,
+            if (isCompleted)
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ExamAnswersPage(
+                                paperId: exam['id'],
+                                paperTitle: exam['title'],
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.surface,
+                          foregroundColor: theme.colorScheme.primary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(color: theme.colorScheme.primary),
+                          ),
+                        ),
+                        child: const Text('View Answers', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () => _handleExamClick(exam),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Leaderboard', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => _handleExamClick(exam),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    isLocked ? 'Locked' : 'Start Exam',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                child: Text(
-                  isCompleted ? 'View Leaderboard' : (isLocked ? 'Locked' : 'Start Exam'),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
               ),
-            ),
           ],
         ),
       ),

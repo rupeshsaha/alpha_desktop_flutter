@@ -53,6 +53,8 @@ class _LoginPageState extends State<LoginPage> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
         await prefs.setString('user_role', role);
+        await prefs.setString('user_name', data['user']['name'] ?? '');
+        await prefs.setString('user_email', data['user']['email'] ?? '');
 
         if (role == 'teacher') {
           Navigator.pushReplacement(

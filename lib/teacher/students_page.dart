@@ -273,11 +273,22 @@ class _StudentsPageState extends State<StudentsPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    // --- Required Fields ---
+                    Text(
+                      'Required Fields',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
                         labelText: 'Full Name',
+                        prefixIcon: const Icon(Icons.person_outline, size: 20),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -292,6 +303,7 @@ class _StudentsPageState extends State<StudentsPage> {
                       controller: emailController,
                       decoration: InputDecoration(
                         labelText: 'Email Address',
+                        prefixIcon: const Icon(Icons.email_outlined, size: 20),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -309,6 +321,7 @@ class _StudentsPageState extends State<StudentsPage> {
                         labelText: isEdit
                             ? 'New Password (leave blank to keep)'
                             : 'Password',
+                        prefixIcon: const Icon(Icons.lock_outline, size: 20),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -319,42 +332,75 @@ class _StudentsPageState extends State<StudentsPage> {
                       ),
                       obscureText: true,
                     ),
+                    const SizedBox(height: 24),
+                    Divider(color: Theme.of(context).dividerColor.withOpacity(0.1)),
                     const SizedBox(height: 16),
-                    TextField(
-                      controller: phoneController,
-                      decoration: InputDecoration(
-                        labelText: 'Phone Number (Optional)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: fatherNameController,
-                      decoration: InputDecoration(
-                        labelText: 'Father\'s Name (Optional)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    // --- Additional Details ---
+                    Text(
+                      'Additional Details',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: registrationIdController,
-                      decoration: InputDecoration(
-                        labelText: 'Registration ID (Optional)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: phoneController,
+                            decoration: InputDecoration(
+                              labelText: 'Phone Number',
+                              prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            ),
+                            keyboardType: TextInputType.phone,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextField(
+                            controller: fatherNameController,
+                            decoration: InputDecoration(
+                              labelText: "Father's Name",
+                              prefixIcon: const Icon(Icons.family_restroom, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
-                    TextField(
-                      controller: addressController,
-                      decoration: InputDecoration(
-                        labelText: 'Address (Optional)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: registrationIdController,
+                            decoration: InputDecoration(
+                              labelText: 'Registration ID',
+                              prefixIcon: const Icon(Icons.badge_outlined, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextField(
+                            controller: addressController,
+                            decoration: InputDecoration(
+                              labelText: 'Address',
+                              prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -363,6 +409,7 @@ class _StudentsPageState extends State<StudentsPage> {
                           child: DropdownButtonFormField<String>(
                             decoration: InputDecoration(
                               labelText: 'Gender',
+                              prefixIcon: const Icon(Icons.person_outline, size: 20),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             ),
@@ -387,17 +434,24 @@ class _StudentsPageState extends State<StudentsPage> {
                               );
                               if (picked != null) {
                                 setModalState(() {
-                                  dob = "\${picked.year}-\${picked.month.toString().padLeft(2, '0')}-\${picked.day.toString().padLeft(2, '0')}";
+                                  dob = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
                                 });
                               }
                             },
                             child: InputDecorator(
                               decoration: InputDecoration(
-                                labelText: 'Date of Birth (Optional)',
+                                labelText: 'Date of Birth',
+                                prefixIcon: const Icon(Icons.cake_outlined, size: 20),
+                                suffixIcon: const Icon(Icons.calendar_today, size: 18),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                               ),
-                              child: Text(dob ?? 'Select Date'),
+                              child: Text(
+                                dob ?? 'Select Date',
+                                style: TextStyle(
+                                  color: dob != null ? null : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                ),
+                              ),
                             ),
                           ),
                         ),

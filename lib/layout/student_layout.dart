@@ -5,19 +5,46 @@ import '../auth/login_page.dart';
 import '../core/widgets/theme_toggle_button.dart';
 import '../student/student_dashboard.dart';
 import '../student/exams_page.dart';
+import '../student/my_profile_page.dart';
 
-class StudentLayout extends StatelessWidget {
+class StudentLayout extends StatefulWidget {
   final Widget child;
   final String title;
 
   const StudentLayout({super.key, required this.child, required this.title});
 
-  void _logout(BuildContext context) async {
+  @override
+  State<StudentLayout> createState() => _StudentLayoutState();
+}
+
+class _StudentLayoutState extends State<StudentLayout> {
+  String _userName = 'Student';
+  String _userEmail = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _userName = prefs.getString('user_name') ?? 'Student';
+        _userEmail = prefs.getString('user_email') ?? '';
+      });
+    }
+  }
+
+  void _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('user_role');
+    await prefs.remove('user_name');
+    await prefs.remove('user_email');
 
-    if (!context.mounted) return;
+    if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -48,7 +75,7 @@ class StudentLayout extends StatelessWidget {
                   onPressed: () => Scaffold.of(ctx).openDrawer(),
                 ),
               Text(
-                title,
+                widget.title,
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const Spacer(),
@@ -68,7 +95,7 @@ class StudentLayout extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    'S',
+                    _userName.isNotEmpty ? _userName[0].toUpperCase() : 'S',
                     style: TextStyle(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.bold,
@@ -81,9 +108,7 @@ class StudentLayout extends StatelessWidget {
           ),
         ),
         // Page Content
-        Expanded(
-          child: child,
-        ),
+        Expanded(child: widget.child),
         // Footer Bar
         Container(
           height: 40,
@@ -134,12 +159,10 @@ class StudentLayout extends StatelessWidget {
 
   Widget _buildSidebar(BuildContext context, ThemeData theme, {bool isDrawer = false}) {
     final List<Map<String, dynamic>> menuItems = [
-      {'title': 'Student Dashboard', 'icon': Icons.dashboard_outlined, 'activeIcon': Icons.dashboard, 'isActive': title == 'Student Dashboard'},
-      {'title': 'Exams', 'icon': Icons.quiz_outlined, 'activeIcon': Icons.quiz, 'isActive': title == 'Exams'},
-      {'title': 'My Courses', 'icon': Icons.book_outlined, 'activeIcon': Icons.book, 'isActive': title == 'My Courses'},
-      {'title': 'Grades', 'icon': Icons.grade_outlined, 'activeIcon': Icons.grade, 'isActive': title == 'Grades'},
-      {'title': 'Schedule', 'icon': Icons.calendar_today_outlined, 'activeIcon': Icons.calendar_today, 'isActive': title == 'Schedule'},
-      {'title': 'Settings', 'icon': Icons.settings_outlined, 'activeIcon': Icons.settings, 'isActive': title == 'Settings'},
+      {'title': 'Dashboard', 'icon': Icons.dashboard_outlined, 'activeIcon': Icons.dashboard, 'isActive': widget.title == 'Student Dashboard', 'page': const StudentDashboard()},
+      {'title': 'Exams', 'icon': Icons.quiz_outlined, 'activeIcon': Icons.quiz, 'isActive': widget.title == 'Exams', 'page': const ExamsPage()},
+      {'title': 'My Profile', 'icon': Icons.person_outline, 'activeIcon': Icons.person, 'isActive': widget.title == 'My Profile', 'page': const MyProfilePage()},
+      {'title': 'Settings', 'icon': Icons.settings_outlined, 'activeIcon': Icons.settings, 'isActive': widget.title == 'Settings', 'page': null},
     ];
 
     return Container(
@@ -181,7 +204,7 @@ class StudentLayout extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      'S',
+                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'S',
                       style: TextStyle(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.bold,
@@ -195,8 +218,16 @@ class StudentLayout extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Student Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('student@gmail.com', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                      Text(
+                        _userName,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        _userEmail,
+                        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
@@ -218,21 +249,11 @@ class StudentLayout extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                     onTap: () {
                       if (isDrawer) Navigator.pop(context); // close drawer
-                      
-                      if (item['title'] == 'Exams' && title != 'Exams') {
+                      if (!isSelected && item['page'] != null) {
                         Navigator.pushReplacement(
                           context,
                           PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) => const ExamsPage(),
-                            transitionDuration: Duration.zero,
-                            reverseTransitionDuration: Duration.zero,
-                          ),
-                        );
-                      } else if (item['title'] == 'Student Dashboard' && title != 'Student Dashboard') {
-                        Navigator.pushReplacement(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) => const StudentDashboard(),
+                            pageBuilder: (context, animation, secondaryAnimation) => item['page'],
                             transitionDuration: Duration.zero,
                             reverseTransitionDuration: Duration.zero,
                           ),
@@ -273,7 +294,7 @@ class StudentLayout extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: InkWell(
               borderRadius: BorderRadius.circular(8),
-              onTap: () => _logout(context),
+              onTap: _logout,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
