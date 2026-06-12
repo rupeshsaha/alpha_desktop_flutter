@@ -1,16 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme_controller.dart';
 import 'theme/app_theme.dart';
 import 'auth/login_page.dart';
+import 'teacher/teacher_dashboard.dart';
+import 'student/student_dashboard.dart';
 
 final ThemeController themeController = ThemeController();
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token');
+  final role = prefs.getString('user_role');
+
+  Widget initialPage = const LoginPage();
+  if (token != null && token.isNotEmpty) {
+    if (role == 'teacher') {
+      initialPage = const TeacherDashboard();
+    } else if (role == 'student') {
+      initialPage = const StudentDashboard();
+    }
+  }
+
+  runApp(MyApp(initialPage: initialPage));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final Widget initialPage;
+  const MyApp({super.key, required this.initialPage});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +42,7 @@ class MyApp extends StatelessWidget {
           themeMode: themeController.themeMode,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          home: const LoginPage(),
+          home: initialPage,
         );
       },
     );

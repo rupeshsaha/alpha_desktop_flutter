@@ -26,20 +26,23 @@ class _StudentDashboardContent extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Welcome back, Student!',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Ready to learn something new today?',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Welcome back, Student!',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Ready to learn something new today?',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 16),
               ElevatedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.play_arrow),
@@ -48,19 +51,21 @@ class _StudentDashboardContent extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 32),
-          GridView.count(
-            crossAxisCount: isDesktop ? 4 : 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 24,
-            crossAxisSpacing: 24,
-            childAspectRatio: isDesktop ? 2.2 : 1.5,
-            children: [
-              _buildStatCard(context, 'Enrolled Courses', '5', Icons.book, Colors.blue),
-              _buildStatCard(context, 'Completed Tasks', '12', Icons.task_alt, Colors.green),
-              _buildStatCard(context, 'Upcoming Deadlines', '2', Icons.timer, Colors.orange),
-              _buildStatCard(context, 'Average Grade', 'A-', Icons.grade, Colors.purple),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final crossAxisCount = isDesktop ? 4 : 2;
+              final width = (constraints.maxWidth - (24 * (crossAxisCount - 1))) / crossAxisCount;
+              return Wrap(
+                spacing: 24,
+                runSpacing: 24,
+                children: [
+                  SizedBox(width: width, child: _buildStatCard(context, 'Enrolled Courses', '5', Icons.book, Colors.blue)),
+                  SizedBox(width: width, child: _buildStatCard(context, 'Completed Tasks', '12', Icons.task_alt, Colors.green)),
+                  SizedBox(width: width, child: _buildStatCard(context, 'Upcoming Deadlines', '2', Icons.timer, Colors.orange)),
+                  SizedBox(width: width, child: _buildStatCard(context, 'Average Grade', 'A-', Icons.grade, Colors.purple)),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 40),
           Row(
@@ -93,6 +98,7 @@ class _StudentDashboardContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
@@ -106,7 +112,7 @@ class _StudentDashboardContent extends StatelessWidget {
                 ),
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 24),
             Text(
               value,
               style: const TextStyle(
@@ -139,9 +145,11 @@ class _StudentDashboardContent extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Active Courses',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: const Text(
+                    'Active Courses',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 TextButton(
                   onPressed: () {},

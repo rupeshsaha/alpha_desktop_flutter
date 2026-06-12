@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import '../core/widgets/custom_textfield.dart';
 import '../core/widgets/custom_button.dart';
@@ -17,24 +20,65 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  void _login() {
+  bool _isLoading = false;
+
+  Future<void> _login() async {
     final email = _emailController.text.trim();
-    
-    if (email == 'teacher@gmail.com') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const TeacherDashboard()),
-      );
-    } else if (email == 'student@gmail.com') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const StudentDashboard()),
-      );
-    } else {
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Use teacher@gmail.com or student@gmail.com to login.'),
-        ),
+        const SnackBar(content: Text('Please enter email and password')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:8000/api/login'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final role = data['role'];
+        final token = data['token'];
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', token);
+        await prefs.setString('user_role', role);
+
+        if (role == 'teacher') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const TeacherDashboard()),
+          );
+        } else if (role == 'student') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const StudentDashboard()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unknown role')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid credentials')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Connection error: $e')),
       );
     }
   }
@@ -212,23 +256,13 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                CustomButton(
-                  text: 'Teacher Login',
-                  icon: Icons.person_outline,
-                  onPressed: () {
-                    _emailController.text = 'teacher@gmail.com';
-                    _login();
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomButton(
-                  text: 'Student Login',
-                  icon: Icons.school_outlined,
-                  onPressed: () {
-                    _emailController.text = 'student@gmail.com';
-                    _login();
-                  },
-                ),
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : CustomButton(
+                        text: 'Sign In',
+                        icon: Icons.login,
+                        onPressed: _login,
+                      ),
               ],
             ),
           ),

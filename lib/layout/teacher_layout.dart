@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import '../auth/login_page.dart';
 import '../core/widgets/theme_toggle_button.dart';
@@ -9,10 +10,16 @@ class TeacherLayout extends StatelessWidget {
 
   const TeacherLayout({super.key, required this.child, required this.title});
 
-  void _logout(BuildContext context) {
-    Navigator.pushReplacement(
+  void _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await prefs.remove('user_role');
+
+    if (!context.mounted) return;
+    Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
     );
   }
 

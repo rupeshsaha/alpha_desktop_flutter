@@ -26,20 +26,23 @@ class _TeacherDashboardContent extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Welcome back, Teacher!',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Here is your summary for today.',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Welcome back, Teacher!',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Here is your summary for today.',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 16),
               ElevatedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.add),
@@ -48,19 +51,21 @@ class _TeacherDashboardContent extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 32),
-          GridView.count(
-            crossAxisCount: isDesktop ? 4 : 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 24,
-            crossAxisSpacing: 24,
-            childAspectRatio: isDesktop ? 2.2 : 1.5,
-            children: [
-              _buildStatCard(context, 'Total Students', '1,242', Icons.people_alt, Colors.blue),
-              _buildStatCard(context, 'Active Classes', '14', Icons.class_, Colors.green),
-              _buildStatCard(context, 'Assignments to Grade', '38', Icons.grading, Colors.orange),
-              _buildStatCard(context, 'Upcoming Exams', '3', Icons.event_note, Colors.purple),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final crossAxisCount = isDesktop ? 4 : 2;
+              final width = (constraints.maxWidth - (24 * (crossAxisCount - 1))) / crossAxisCount;
+              return Wrap(
+                spacing: 24,
+                runSpacing: 24,
+                children: [
+                  SizedBox(width: width, child: _buildStatCard(context, 'Total Students', '1,242', Icons.people_alt, Colors.blue)),
+                  SizedBox(width: width, child: _buildStatCard(context, 'Active Classes', '14', Icons.class_, Colors.green)),
+                  SizedBox(width: width, child: _buildStatCard(context, 'Assignments to Grade', '38', Icons.grading, Colors.orange)),
+                  SizedBox(width: width, child: _buildStatCard(context, 'Upcoming Exams', '3', Icons.event_note, Colors.purple)),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 40),
           Row(
@@ -93,8 +98,10 @@ class _TeacherDashboardContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -104,13 +111,20 @@ class _TeacherDashboardContent extends StatelessWidget {
                   ),
                   child: Icon(icon, color: color, size: 24),
                 ),
-                const Spacer(),
-                const Icon(Icons.arrow_upward, color: Colors.green, size: 16),
-                const SizedBox(width: 4),
-                const Text('12%', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                Flexible(
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    alignment: WrapAlignment.end,
+                    children: const [
+                      Icon(Icons.arrow_upward, color: Colors.green, size: 16),
+                      SizedBox(width: 4),
+                      Text('12%', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 24),
             Text(
               value,
               style: const TextStyle(
@@ -194,9 +208,11 @@ class _TeacherDashboardContent extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Upcoming Schedule',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: const Text(
+                    'Upcoming Schedule',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 TextButton(
                   onPressed: () {},
@@ -243,14 +259,15 @@ class _TeacherDashboardContent extends StatelessWidget {
               children: [
                 Text(subject, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 const SizedBox(height: 6),
-                Row(
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Icon(Icons.access_time, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                    const SizedBox(width: 4),
                     Text(time, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13)),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Icon(Icons.location_on, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                    const SizedBox(width: 4),
                     Text(room, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13)),
                   ],
                 ),
