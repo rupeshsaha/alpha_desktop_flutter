@@ -331,7 +331,7 @@ class _StudentsPageState extends State<StudentsPage> {
                         return DropdownMenuItem<int>(
                           value: batch['id'],
                           child: Text(
-                            '${batch['name']} (${batch['course']['name'] ?? 'Course'})',
+                            '${batch['name']} (${batch['course']?['name'] ?? 'Course'})',
                           ),
                         );
                       }).toList(),

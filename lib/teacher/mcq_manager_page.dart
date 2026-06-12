@@ -208,6 +208,12 @@ class _McqManagerPageState extends State<McqManagerPage> {
     final descController = TextEditingController(
       text: isEdit ? paper['description'] : '',
     );
+    final dateController = TextEditingController(
+      text: isEdit ? (paper['exam_date'] ?? '') : '',
+    );
+    final passwordController = TextEditingController(
+      text: isEdit ? (paper['exam_password'] ?? '') : '',
+    );
     int? selectedBatchId = isEdit
         ? paper['batch_id']
         : (_batches.isNotEmpty ? _batches.first['id'] : null);
@@ -271,7 +277,7 @@ class _McqManagerPageState extends State<McqManagerPage> {
                         return DropdownMenuItem<int>(
                           value: b['id'],
                           child: Text(
-                            '${b['name']} (${b['course']['name'] ?? 'Course'})',
+                            '${b['name']} (${b['course']?['name'] ?? 'Course'})',
                           ),
                         );
                       }).toList(),
@@ -318,6 +324,56 @@ class _McqManagerPageState extends State<McqManagerPage> {
                         ),
                       ),
                       maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: dateController,
+                            readOnly: true,
+                            onTap: () async {
+                              final pickedDate = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2101),
+                              );
+                              if (pickedDate != null) {
+                                // format as yyyy-mm-dd
+                                dateController.text = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+                              }
+                            },
+                            decoration: InputDecoration(
+                              labelText: 'Exam Date (Optional)',
+                              suffixIcon: const Icon(Icons.calendar_today),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextField(
+                            controller: passwordController,
+                            decoration: InputDecoration(
+                              labelText: 'Exam Password (Optional)',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     Theme(
@@ -399,6 +455,8 @@ class _McqManagerPageState extends State<McqManagerPage> {
                                     'title': titleController.text,
                                     'description': descController.text,
                                     'is_active': isActive,
+                                    'exam_date': dateController.text.isNotEmpty ? dateController.text : null,
+                                    'exam_password': passwordController.text.isNotEmpty ? passwordController.text : null,
                                   }),
                                 );
 
@@ -712,6 +770,7 @@ class _McqManagerPageState extends State<McqManagerPage> {
                                   DataColumn(label: Text('S.No')),
                                   DataColumn(label: Text('Paper Title')),
                                   DataColumn(label: Text('Batch')),
+                                  DataColumn(label: Text('Exam Date')),
                                   DataColumn(label: Text('Status')),
                                   DataColumn(label: Text('Actions')),
                                 ],
@@ -783,6 +842,17 @@ class _McqManagerPageState extends State<McqManagerPage> {
                                               fontWeight: FontWeight.w600,
                                               fontSize: 12,
                                             ),
+                                          ),
+                                        ),
+                                      ),
+                                      DataCell(
+                                        Text(
+                                          paper['exam_date'] ?? 'Not set',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            color: paper['exam_date'] != null
+                                                ? Theme.of(context).colorScheme.onSurface
+                                                : Colors.grey,
                                           ),
                                         ),
                                       ),

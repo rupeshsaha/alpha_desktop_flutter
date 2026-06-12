@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import '../auth/login_page.dart';
 import '../core/widgets/theme_toggle_button.dart';
+import '../student/student_dashboard.dart';
+import '../student/exams_page.dart';
 
 class StudentLayout extends StatelessWidget {
   final Widget child;
@@ -133,6 +135,7 @@ class StudentLayout extends StatelessWidget {
   Widget _buildSidebar(BuildContext context, ThemeData theme, {bool isDrawer = false}) {
     final List<Map<String, dynamic>> menuItems = [
       {'title': 'Student Dashboard', 'icon': Icons.dashboard_outlined, 'activeIcon': Icons.dashboard, 'isActive': title == 'Student Dashboard'},
+      {'title': 'Exams', 'icon': Icons.quiz_outlined, 'activeIcon': Icons.quiz, 'isActive': title == 'Exams'},
       {'title': 'My Courses', 'icon': Icons.book_outlined, 'activeIcon': Icons.book, 'isActive': title == 'My Courses'},
       {'title': 'Grades', 'icon': Icons.grade_outlined, 'activeIcon': Icons.grade, 'isActive': title == 'Grades'},
       {'title': 'Schedule', 'icon': Icons.calendar_today_outlined, 'activeIcon': Icons.calendar_today, 'isActive': title == 'Schedule'},
@@ -215,7 +218,26 @@ class StudentLayout extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                     onTap: () {
                       if (isDrawer) Navigator.pop(context); // close drawer
-                      // TODO: Navigate to the respective page
+                      
+                      if (item['title'] == 'Exams' && title != 'Exams') {
+                        Navigator.pushReplacement(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => const ExamsPage(),
+                            transitionDuration: Duration.zero,
+                            reverseTransitionDuration: Duration.zero,
+                          ),
+                        );
+                      } else if (item['title'] == 'Student Dashboard' && title != 'Student Dashboard') {
+                        Navigator.pushReplacement(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => const StudentDashboard(),
+                            transitionDuration: Duration.zero,
+                            reverseTransitionDuration: Duration.zero,
+                          ),
+                        );
+                      }
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
