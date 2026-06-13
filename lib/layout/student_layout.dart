@@ -7,7 +7,9 @@ import '../student/student_dashboard.dart';
 import '../student/exams_page.dart';
 import '../student/my_profile_page.dart';
 import '../student/leaderboard_page.dart';
+import '../student/global_leaderboard_page.dart';
 import '../student/materials_page.dart';
+import '../student/feedbacks_page.dart';
 
 class StudentLayout extends StatefulWidget {
   final Widget child;
@@ -164,6 +166,8 @@ class _StudentLayoutState extends State<StudentLayout> {
       {'title': 'Dashboard', 'icon': Icons.dashboard_outlined, 'activeIcon': Icons.dashboard, 'isActive': widget.title == 'Student Dashboard', 'page': const StudentDashboard()},
       {'title': 'Exams', 'icon': Icons.quiz_outlined, 'activeIcon': Icons.quiz, 'isActive': widget.title == 'Exams', 'page': const ExamsPage()},
       {'title': 'Study Materials', 'icon': Icons.library_books_outlined, 'activeIcon': Icons.library_books, 'isActive': widget.title == 'Study Materials', 'page': const MaterialsPage()},
+      {'title': 'Feedbacks', 'icon': Icons.feedback_outlined, 'activeIcon': Icons.feedback, 'isActive': widget.title == 'Feedbacks', 'page': const FeedbacksPage()},
+      {'title': 'Leaderboard', 'icon': Icons.leaderboard_outlined, 'activeIcon': Icons.leaderboard, 'isActive': widget.title == 'Leaderboard', 'page': const GlobalLeaderboardPage()},
       {'title': 'My Profile', 'icon': Icons.person_outline, 'activeIcon': Icons.person, 'isActive': widget.title == 'My Profile', 'page': const MyProfilePage()},
       {'title': 'Settings', 'icon': Icons.settings_outlined, 'activeIcon': Icons.settings, 'isActive': widget.title == 'Settings', 'page': null},
     ];

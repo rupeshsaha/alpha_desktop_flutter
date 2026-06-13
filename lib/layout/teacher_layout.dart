@@ -9,13 +9,20 @@ import '../teacher/batch_manager_page.dart';
 import '../teacher/students_page.dart';
 import '../teacher/mcq_manager_page.dart';
 import '../teacher/material_manager_page.dart';
+import '../teacher/feedback_manager_page.dart';
+import '../teacher/global_leaderboard_page.dart';
 
-class TeacherLayout extends StatelessWidget {
+class TeacherLayout extends StatefulWidget {
   final Widget child;
   final String title;
 
   const TeacherLayout({super.key, required this.child, required this.title});
 
+  @override
+  State<TeacherLayout> createState() => _TeacherLayoutState();
+}
+
+class _TeacherLayoutState extends State<TeacherLayout> {
   void _logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
@@ -52,7 +59,7 @@ class TeacherLayout extends StatelessWidget {
                   onPressed: () => Scaffold.of(ctx).openDrawer(),
                 ),
               Text(
-                title,
+                widget.title,
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const Spacer(),
@@ -86,7 +93,7 @@ class TeacherLayout extends StatelessWidget {
         ),
         // Page Content
         Expanded(
-          child: child,
+          child: widget.child,
         ),
         // Footer Bar
         Container(
@@ -137,13 +144,16 @@ class TeacherLayout extends StatelessWidget {
   }
 
   Widget _buildSidebar(BuildContext context, ThemeData theme, {bool isDrawer = false}) {
+    final title = widget.title;
     final List<Map<String, dynamic>> menuItems = [
       {'title': 'Dashboard', 'icon': Icons.dashboard_outlined, 'activeIcon': Icons.dashboard, 'isActive': title == 'Dashboard', 'page': const TeacherDashboard()},
       {'title': 'Courses', 'icon': Icons.menu_book_outlined, 'activeIcon': Icons.menu_book, 'isActive': title == 'Courses', 'page': const CourseManagerPage()},
       {'title': 'Batches', 'icon': Icons.layers_outlined, 'activeIcon': Icons.layers, 'isActive': title == 'Batches', 'page': const BatchManagerPage()},
       {'title': 'Students', 'icon': Icons.people_outline, 'activeIcon': Icons.people, 'isActive': title == 'Students', 'page': const StudentsPage()},
       {'title': 'MCQ Papers', 'icon': Icons.assignment_outlined, 'activeIcon': Icons.assignment, 'isActive': title == 'MCQ Papers', 'page': const McqManagerPage()},
+      {'title': 'Leaderboard', 'icon': Icons.leaderboard_outlined, 'activeIcon': Icons.leaderboard, 'isActive': title == 'Leaderboard', 'page': const TeacherGlobalLeaderboardPage()},
       {'title': 'Study Materials', 'icon': Icons.library_books_outlined, 'activeIcon': Icons.library_books, 'isActive': title == 'Study Materials', 'page': const MaterialManagerPage()},
+      {'title': 'Student Feedbacks', 'icon': Icons.feedback_outlined, 'activeIcon': Icons.feedback, 'isActive': title == 'Student Feedbacks', 'page': const FeedbackManagerPage()},
       {'title': 'Settings', 'icon': Icons.settings_outlined, 'activeIcon': Icons.settings, 'isActive': title == 'Settings', 'page': null},
     ];
 
@@ -200,8 +210,15 @@ class TeacherLayout extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Teacher Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('teacher@gmail.com', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                      const Text(
+                        'Welcome Back,',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                      Text(
+                        widget.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
