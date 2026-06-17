@@ -142,7 +142,7 @@ class _StudentLayoutState extends State<StudentLayout> {
                 Icon(Icons.code, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.5)),
                 const SizedBox(width: 6),
                 Text(
-                  'Developed by Brotytics Technologies',
+                  'Developed by Brolytics Technologies',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
