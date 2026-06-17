@@ -5,9 +5,14 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../layout/teacher_layout.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
+import '../core/utils/modal_helper.dart';
+import 'students_page.dart';
+import 'mcq_manager_page.dart';
+import 'material_manager_page.dart';
 
 class BatchManagerPage extends StatefulWidget {
-  const BatchManagerPage({super.key});
+  final String? initialCourseId;
+  const BatchManagerPage({super.key, this.initialCourseId});
 
   @override
   State<BatchManagerPage> createState() => _BatchManagerPageState();
@@ -23,6 +28,9 @@ class _BatchManagerPageState extends State<BatchManagerPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialCourseId != null) {
+      _courseFilter = widget.initialCourseId;
+    }
     _fetchData();
   }
 
@@ -147,45 +155,13 @@ class _BatchManagerPageState extends State<BatchManagerPage> {
       return;
     }
 
-    showDialog(
+    ModalHelper.showRightSideModal(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              width: 500,
-              padding: const EdgeInsets.all(24),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isEdit ? 'Edit Batch' : 'Add New Batch',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: IconButton(
-                            icon: const Icon(Icons.close, size: 20),
-                            onPressed: () => Navigator.pop(context),
-                            splashRadius: 20,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+      title: isEdit ? 'Edit Batch' : 'Add New Batch',
+      contentBuilder: (context, setModalState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                     const Text(
                       'Select Course',
                       style: TextStyle(fontWeight: FontWeight.w600),
@@ -268,139 +244,137 @@ class _BatchManagerPageState extends State<BatchManagerPage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: TextButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18,
-                              ),
-                              minimumSize: const Size(120, 54),
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              if (nameController.text.isEmpty ||
-                                  selectedCourseId == null) {
-                                SnackbarHelper.showError(
-                                  context,
-                                  'Please fill in the batch name and select a course.',
-                                );
-                                return;
-                              }
-
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              final token = prefs.getString('auth_token');
-
-                              final url = isEdit
-                                  ? ApiConstants.baseUrl + '/batches/${batch['id']}'
-                                  : ApiConstants.baseUrl + '/batches';
-
-                              final requestMethod = isEdit
-                                  ? http.put
-                                  : http.post;
-
-                              try {
-                                final response = await requestMethod(
-                                  Uri.parse(url),
-                                  headers: {
-                                    'Authorization': 'Bearer $token',
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                  },
-                                  body: jsonEncode({
-                                    'course_id': selectedCourseId,
-                                    'name': nameController.text,
-                                    'fee': feeController.text,
-                                    'schedule_time': scheduleController.text,
-                                    'is_active': true,
-                                    'is_hidden': false,
-                                  }),
-                                );
-
-                                if (response.statusCode == 201 ||
-                                    response.statusCode == 200) {
-                                  if (mounted) Navigator.pop(context);
-                                  _fetchData();
-                                  SnackbarHelper.showSuccess(
-                                    context,
-                                    isEdit
-                                        ? 'Batch updated successfully.'
-                                        : 'Batch added successfully.',
-                                  );
-                                } else if (response.statusCode == 422) {
-                                  final data = jsonDecode(response.body);
-                                  String errorMsg =
-                                      data['message'] ?? 'Validation error.';
-                                  if (data['errors'] != null) {
-                                    final errors =
-                                        data['errors'] as Map<String, dynamic>;
-                                    if (errors.isNotEmpty) {
-                                      errorMsg = errors.values.first[0];
-                                    }
-                                  }
-                                  SnackbarHelper.showError(context, errorMsg);
-                                } else {
-                                  SnackbarHelper.showError(
-                                    context,
-                                    'Failed to save batch. Check inputs.',
-                                  );
-                                }
-                              } catch (e) {
-                                SnackbarHelper.showError(
-                                  context,
-                                  'Network error while saving batch.',
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18,
-                              ),
-                              minimumSize: const Size(120, 54),
-                            ),
-                            child: Text(
-                              isEdit ? 'Save Changes' : 'Create Batch',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+          ],
+        );
+      },
+      actionBuilder: (context, setModalState) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
-          );
-        },
-      ),
+            const SizedBox(width: 12),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (nameController.text.isEmpty ||
+                      selectedCourseId == null) {
+                    SnackbarHelper.showError(
+                      context,
+                      'Please fill in the batch name and select a course.',
+                    );
+                    return;
+                  }
+
+                  final prefs =
+                      await SharedPreferences.getInstance();
+                  final token = prefs.getString('auth_token');
+
+                  final url = isEdit
+                      ? ApiConstants.baseUrl + '/batches/${batch['id']}'
+                      : ApiConstants.baseUrl + '/batches';
+
+                  final requestMethod = isEdit
+                      ? http.put
+                      : http.post;
+
+                  try {
+                    final response = await requestMethod(
+                      Uri.parse(url),
+                      headers: {
+                        'Authorization': 'Bearer $token',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                      },
+                      body: jsonEncode({
+                        'course_id': selectedCourseId,
+                        'name': nameController.text,
+                        'fee': feeController.text,
+                        'schedule_time': scheduleController.text,
+                        'is_active': true,
+                        'is_hidden': false,
+                      }),
+                    );
+
+                    if (response.statusCode == 201 ||
+                        response.statusCode == 200) {
+                      if (context.mounted) Navigator.pop(context);
+                      _fetchData();
+                      SnackbarHelper.showSuccess(
+                        context,
+                        isEdit
+                            ? 'Batch updated successfully.'
+                            : 'Batch added successfully.',
+                      );
+                    } else if (response.statusCode == 422) {
+                      final data = jsonDecode(response.body);
+                      String errorMsg =
+                          data['message'] ?? 'Validation error.';
+                      if (data['errors'] != null) {
+                        final errors =
+                            data['errors'] as Map<String, dynamic>;
+                        if (errors.isNotEmpty) {
+                          errorMsg = errors.values.first[0];
+                        }
+                      }
+                      SnackbarHelper.showError(context, errorMsg);
+                    } else {
+                      SnackbarHelper.showError(
+                        context,
+                        'Failed to save batch. Check inputs.',
+                      );
+                    }
+                  } catch (e) {
+                    SnackbarHelper.showError(
+                      context,
+                      'Network error while saving batch.',
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: Text(
+                  isEdit ? 'Save Changes' : 'Create Batch',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -421,7 +395,7 @@ class _BatchManagerPageState extends State<BatchManagerPage> {
                   height: 48,
                   child: DropdownButtonFormField<String>(
                     isExpanded: true,
-                    value: _courseFilter,
+                    value: _courses.any((c) => c['id'].toString() == _courseFilter) ? _courseFilter : null,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
@@ -609,7 +583,72 @@ class _BatchManagerPageState extends State<BatchManagerPage> {
                                         Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-
+                                            MouseRegion(
+                                              cursor: SystemMouseCursors.click,
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.people,
+                                                  color: Colors.purple,
+                                                  size: 20,
+                                                ),
+                                                tooltip: 'View Students',
+                                                onPressed: () {
+                                                  Navigator.pushReplacement(
+                                                    context,
+                                                    PageRouteBuilder(
+                                                      pageBuilder: (context, animation, secondaryAnimation) => StudentsPage(initialBatchId: batch['id'].toString()),
+                                                      transitionDuration: Duration.zero,
+                                                      reverseTransitionDuration: Duration.zero,
+                                                    ),
+                                                  );
+                                                },
+                                                splashRadius: 20,
+                                              ),
+                                            ),
+                                            MouseRegion(
+                                              cursor: SystemMouseCursors.click,
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.quiz,
+                                                  color: Colors.orange,
+                                                  size: 20,
+                                                ),
+                                                tooltip: 'View MCQ Papers',
+                                                onPressed: () {
+                                                  Navigator.pushReplacement(
+                                                    context,
+                                                    PageRouteBuilder(
+                                                      pageBuilder: (context, animation, secondaryAnimation) => McqManagerPage(initialBatchId: batch['id'].toString()),
+                                                      transitionDuration: Duration.zero,
+                                                      reverseTransitionDuration: Duration.zero,
+                                                    ),
+                                                  );
+                                                },
+                                                splashRadius: 20,
+                                              ),
+                                            ),
+                                            MouseRegion(
+                                              cursor: SystemMouseCursors.click,
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.library_books,
+                                                  color: Colors.green,
+                                                  size: 20,
+                                                ),
+                                                tooltip: 'View Materials',
+                                                onPressed: () {
+                                                  Navigator.pushReplacement(
+                                                    context,
+                                                    PageRouteBuilder(
+                                                      pageBuilder: (context, animation, secondaryAnimation) => MaterialManagerPage(initialBatchId: batch['id'].toString()),
+                                                      transitionDuration: Duration.zero,
+                                                      reverseTransitionDuration: Duration.zero,
+                                                    ),
+                                                  );
+                                                },
+                                                splashRadius: 20,
+                                              ),
+                                            ),
                                             MouseRegion(
                                               cursor: SystemMouseCursors.click,
                                               child: IconButton(

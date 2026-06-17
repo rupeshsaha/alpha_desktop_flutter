@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../layout/teacher_layout.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
+import '../core/utils/modal_helper.dart';
 
 class McqQuestionManagerPage extends StatefulWidget {
   final Map<String, dynamic> paper;
@@ -142,45 +143,13 @@ class _McqQuestionManagerPageState extends State<McqQuestionManagerPage> {
     );
     String selectedOption = isEdit ? question['correct_option'] : 'a';
 
-    showDialog(
+    ModalHelper.showRightSideModal(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              width: 600,
-              padding: const EdgeInsets.all(24),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isEdit ? 'Edit Question' : 'Add Question',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: IconButton(
-                            icon: const Icon(Icons.close, size: 20),
-                            onPressed: () => Navigator.pop(context),
-                            splashRadius: 20,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+      title: isEdit ? 'Edit Question' : 'Add Question',
+      contentBuilder: (context, setModalState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                     TextField(
                       controller: questionTextController,
                       decoration: InputDecoration(
@@ -276,123 +245,121 @@ class _McqQuestionManagerPageState extends State<McqQuestionManagerPage> {
                       },
                     ),
                     const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: TextButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18,
-                              ),
-                              minimumSize: const Size(120, 54),
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              if (questionTextController.text.isEmpty) return;
-
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              final token = prefs.getString('auth_token');
-
-                              final url = isEdit
-                                  ? ApiConstants.baseUrl + '/mcq_questions/${question['id']}'
-                                  : ApiConstants.baseUrl + '/mcq_questions';
-
-                              final requestMethod = isEdit
-                                  ? http.put
-                                  : http.post;
-
-                              try {
-                                final response = await requestMethod(
-                                  Uri.parse(url),
-                                  headers: {
-                                    'Authorization': 'Bearer $token',
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                  },
-                                  body: jsonEncode({
-                                    'mcq_paper_id': widget.paper['id'],
-                                    'question_text':
-                                        questionTextController.text,
-                                    'option_a': optionAController.text,
-                                    'option_b': optionBController.text,
-                                    'option_c': optionCController.text,
-                                    'option_d': optionDController.text,
-                                    'correct_option': selectedOption,
-                                    'is_active': true,
-                                  }),
-                                );
-
-                                if (response.statusCode == 201 ||
-                                    response.statusCode == 200) {
-                                  if (mounted) Navigator.pop(context);
-                                  _fetchQuestions();
-                                  SnackbarHelper.showSuccess(
-                                    context,
-                                    isEdit
-                                        ? 'Question updated.'
-                                        : 'Question created.',
-                                  );
-                                } else {
-                                  SnackbarHelper.showError(
-                                    context,
-                                    'Failed to save question. Check inputs.',
-                                  );
-                                }
-                              } catch (e) {
-                                SnackbarHelper.showError(
-                                  context,
-                                  'Network error while saving question.',
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18,
-                              ),
-                              minimumSize: const Size(120, 54),
-                            ),
-                            child: Text(
-                              isEdit ? 'Save Changes' : 'Save Question',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+          ],
+        );
+      },
+      actionBuilder: (context, setModalState) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
-          );
-        },
-      ),
+            const SizedBox(width: 12),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (questionTextController.text.isEmpty) return;
+
+                  final prefs =
+                      await SharedPreferences.getInstance();
+                  final token = prefs.getString('auth_token');
+
+                  final url = isEdit
+                      ? ApiConstants.baseUrl + '/mcq_questions/${question['id']}'
+                      : ApiConstants.baseUrl + '/mcq_questions';
+
+                  final requestMethod = isEdit
+                      ? http.put
+                      : http.post;
+
+                  try {
+                    final response = await requestMethod(
+                      Uri.parse(url),
+                      headers: {
+                        'Authorization': 'Bearer $token',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                      },
+                      body: jsonEncode({
+                        'mcq_paper_id': widget.paper['id'],
+                        'question_text':
+                            questionTextController.text,
+                        'option_a': optionAController.text,
+                        'option_b': optionBController.text,
+                        'option_c': optionCController.text,
+                        'option_d': optionDController.text,
+                        'correct_option': selectedOption,
+                        'is_active': true,
+                      }),
+                    );
+
+                    if (response.statusCode == 201 ||
+                        response.statusCode == 200) {
+                      if (context.mounted) Navigator.pop(context);
+                      _fetchQuestions();
+                      SnackbarHelper.showSuccess(
+                        context,
+                        isEdit
+                            ? 'Question updated.'
+                            : 'Question created.',
+                      );
+                    } else {
+                      SnackbarHelper.showError(
+                        context,
+                        'Failed to save question. Check inputs.',
+                      );
+                    }
+                  } catch (e) {
+                    SnackbarHelper.showError(
+                      context,
+                      'Network error while saving question.',
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: Text(
+                  isEdit ? 'Save Changes' : 'Save Question',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

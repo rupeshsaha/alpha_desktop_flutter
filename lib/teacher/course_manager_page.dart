@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../layout/teacher_layout.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
+import '../core/utils/modal_helper.dart';
+import 'batch_manager_page.dart';
 
 class CourseManagerPage extends StatefulWidget {
   const CourseManagerPage({super.key});
@@ -135,45 +137,13 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
       text: isEdit ? course['description'] : '',
     );
 
-    showDialog(
+    ModalHelper.showRightSideModal(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              width: 500,
-              padding: const EdgeInsets.all(24),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isEdit ? 'Edit Course' : 'Add New Course',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: IconButton(
-                            icon: const Icon(Icons.close, size: 20),
-                            onPressed: () => Navigator.pop(context),
-                            splashRadius: 20,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+      title: isEdit ? 'Edit Course' : 'Add New Course',
+      contentBuilder: (context, setModalState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
@@ -203,132 +173,130 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
                       maxLines: 3,
                     ),
                     const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: TextButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18,
-                              ),
-                              minimumSize: const Size(120, 54),
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              if (nameController.text.isEmpty) {
-                                SnackbarHelper.showError(context, 'Please fill in the course name.');
-                                return;
-                              }
-
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              final token = prefs.getString('auth_token');
-
-                              final url = isEdit
-                                  ? ApiConstants.baseUrl + '/courses/${course['id']}'
-                                  : ApiConstants.baseUrl + '/courses';
-
-                              final requestMethod = isEdit
-                                  ? http.put
-                                  : http.post;
-
-                              try {
-                                final response = await requestMethod(
-                                  Uri.parse(url),
-                                  headers: {
-                                    'Authorization': 'Bearer $token',
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                  },
-                                  body: jsonEncode({
-                                    'name': nameController.text,
-                                    'description': descController.text,
-                                    'is_active': true,
-                                  }),
-                                );
-
-                                if (response.statusCode == 201 ||
-                                    response.statusCode == 200) {
-                                  if (mounted) Navigator.pop(context);
-                                  _fetchCourses();
-                                  SnackbarHelper.showSuccess(
-                                    context,
-                                    isEdit
-                                        ? 'Course updated successfully.'
-                                        : 'Course added successfully.',
-                                  );
-                                } else if (response.statusCode == 422) {
-                                  final data = jsonDecode(response.body);
-                                  String errorMsg =
-                                      data['message'] ?? 'Validation error.';
-                                  if (data['errors'] != null) {
-                                    final errors =
-                                        data['errors'] as Map<String, dynamic>;
-                                    if (errors.isNotEmpty) {
-                                      errorMsg = errors.values.first[0];
-                                    }
-                                  }
-                                  SnackbarHelper.showError(context, errorMsg);
-                                } else {
-                                  SnackbarHelper.showError(
-                                    context,
-                                    'Failed to save course. Check inputs.',
-                                  );
-                                }
-                              } catch (e) {
-                                SnackbarHelper.showError(
-                                  context,
-                                  'Network error while saving course.',
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18,
-                              ),
-                              minimumSize: const Size(120, 54),
-                            ),
-                            child: Text(
-                              isEdit ? 'Save Changes' : 'Create Course',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+          ],
+        );
+      },
+      actionBuilder: (context, setModalState) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
-          );
-        },
-      ),
+            const SizedBox(width: 12),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (nameController.text.isEmpty) {
+                    SnackbarHelper.showError(context, 'Please fill in the course name.');
+                    return;
+                  }
+
+                  final prefs =
+                      await SharedPreferences.getInstance();
+                  final token = prefs.getString('auth_token');
+
+                  final url = isEdit
+                      ? ApiConstants.baseUrl + '/courses/${course['id']}'
+                      : ApiConstants.baseUrl + '/courses';
+
+                  final requestMethod = isEdit
+                      ? http.put
+                      : http.post;
+
+                  try {
+                    final response = await requestMethod(
+                      Uri.parse(url),
+                      headers: {
+                        'Authorization': 'Bearer $token',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                      },
+                      body: jsonEncode({
+                        'name': nameController.text,
+                        'description': descController.text,
+                        'is_active': true,
+                      }),
+                    );
+
+                    if (response.statusCode == 201 ||
+                        response.statusCode == 200) {
+                      if (context.mounted) Navigator.pop(context);
+                      _fetchCourses();
+                      SnackbarHelper.showSuccess(
+                        context,
+                        isEdit
+                            ? 'Course updated successfully.'
+                            : 'Course added successfully.',
+                      );
+                    } else if (response.statusCode == 422) {
+                      final data = jsonDecode(response.body);
+                      String errorMsg =
+                          data['message'] ?? 'Validation error.';
+                      if (data['errors'] != null) {
+                        final errors =
+                            data['errors'] as Map<String, dynamic>;
+                        if (errors.isNotEmpty) {
+                          errorMsg = errors.values.first[0];
+                        }
+                      }
+                      SnackbarHelper.showError(context, errorMsg);
+                    } else {
+                      SnackbarHelper.showError(
+                        context,
+                        'Failed to save course. Check inputs.',
+                      );
+                    }
+                  } catch (e) {
+                    SnackbarHelper.showError(
+                      context,
+                      'Network error while saving course.',
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: Text(
+                  isEdit ? 'Save Changes' : 'Create Course',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -485,6 +453,28 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
                                         Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
+                                            MouseRegion(
+                                              cursor: SystemMouseCursors.click,
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.visibility,
+                                                  color: Colors.green,
+                                                  size: 20,
+                                                ),
+                                                tooltip: 'View Batches',
+                                                onPressed: () {
+                                                  Navigator.pushReplacement(
+                                                    context,
+                                                    PageRouteBuilder(
+                                                      pageBuilder: (context, animation, secondaryAnimation) => BatchManagerPage(initialCourseId: course['id'].toString()),
+                                                      transitionDuration: Duration.zero,
+                                                      reverseTransitionDuration: Duration.zero,
+                                                    ),
+                                                  );
+                                                },
+                                                splashRadius: 20,
+                                              ),
+                                            ),
                                             MouseRegion(
                                               cursor: SystemMouseCursors.click,
                                               child: IconButton(

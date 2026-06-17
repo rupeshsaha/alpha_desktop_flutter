@@ -7,9 +7,11 @@ import 'package:alpha_desktop_flutter/core/utils/snackbar_helper.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../layout/teacher_layout.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
+import '../core/utils/modal_helper.dart';
 
 class MaterialManagerPage extends StatefulWidget {
-  const MaterialManagerPage({super.key});
+  final String? initialBatchId;
+  const MaterialManagerPage({super.key, this.initialBatchId});
 
   @override
   State<MaterialManagerPage> createState() => _MaterialManagerPageState();
@@ -28,6 +30,9 @@ class _MaterialManagerPageState extends State<MaterialManagerPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialBatchId != null) {
+      _selectedBatchId = widget.initialBatchId;
+    }
     _fetchInitialData();
   }
 
@@ -139,36 +144,13 @@ class _MaterialManagerPageState extends State<MaterialManagerPage> {
     bool isSaving = false;
     PlatformFile? newFile;
 
-    showDialog(
+    ModalHelper.showRightSideModal(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            child: Container(
-              width: 500,
-              padding: const EdgeInsets.all(24),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Edit Material',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        if (!isSaving)
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+      title: 'Edit Material',
+      contentBuilder: (context, setModalState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                     TextField(
                       controller: titleController,
                       enabled: !isSaving,
@@ -220,94 +202,135 @@ class _MaterialManagerPageState extends State<MaterialManagerPage> {
                           )
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: isSaving
-                            ? null
-                            : () async {
-                                if (titleController.text.trim().isEmpty) {
-                                  SnackbarHelper.showError(context, 'Title is required');
-                                  return;
-                                }
-
-                                setModalState(() => isSaving = true);
-
-                                final prefs = await SharedPreferences.getInstance();
-                                final token = prefs.getString('auth_token');
-
-                                try {
-                                  if (newFile == null) {
-                                    // Standard JSON PUT
-                                    final response = await http.put(
-                                      Uri.parse(ApiConstants.baseUrl + '/materials/${material['id']}'),
-                                      headers: {
-                                        'Authorization': 'Bearer $token',
-                                        'Accept': 'application/json',
-                                        'Content-Type': 'application/json'
-                                      },
-                                      body: jsonEncode({
-                                        'title': titleController.text.trim(),
-                                        'description': descController.text.trim(),
-                                      }),
-                                    );
-
-                                    if (response.statusCode == 200) {
-                                      Navigator.pop(context);
-                                      _fetchData();
-                                      SnackbarHelper.showSuccess(context, 'Material updated successfully');
-                                    } else {
-                                      final body = jsonDecode(response.body);
-                                      SnackbarHelper.showError(context, body['message'] ?? 'Failed to update material');
-                                    }
-                                  } else {
-                                    // Multipart POST with _method=PUT
-                                    var request = http.MultipartRequest('POST', Uri.parse(ApiConstants.baseUrl + '/materials/${material['id']}'));
-                                    request.headers['Authorization'] = 'Bearer $token';
-                                    request.headers['Accept'] = 'application/json';
-                                    
-                                    request.fields['_method'] = 'PUT';
-                                    request.fields['title'] = titleController.text.trim();
-                                    request.fields['description'] = descController.text.trim();
-
-                                    request.files.add(http.MultipartFile.fromBytes(
-                                      'file',
-                                      newFile!.bytes!,
-                                      filename: newFile!.name,
-                                    ));
-
-                                    var response = await request.send();
-                                    var responseData = await response.stream.bytesToString();
-
-                                    if (response.statusCode == 200) {
-                                      Navigator.pop(context);
-                                      _fetchData();
-                                      SnackbarHelper.showSuccess(context, 'Material and file updated successfully');
-                                    } else {
-                                      final body = jsonDecode(responseData);
-                                      SnackbarHelper.showError(context, body['message'] ?? 'Failed to update material');
-                                    }
-                                  }
-                                } catch (e) {
-                                  SnackbarHelper.showError(context, 'Network error during update');
-                                } finally {
-                                  if (mounted) setModalState(() => isSaving = false);
-                                }
-                              },
-                        child: isSaving
-                            ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text('Save Changes'),
-                      ),
-                    ),
-                  ],
+          ],
+        );
+      },
+      actionBuilder: (context, setModalState) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: TextButton(
+                onPressed: isSaving ? null : () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
-          );
-        },
-      ),
+            const SizedBox(width: 12),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: ElevatedButton(
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        if (titleController.text.trim().isEmpty) {
+                          SnackbarHelper.showError(context, 'Title is required');
+                          return;
+                        }
+
+                        setModalState(() => isSaving = true);
+
+                        final prefs = await SharedPreferences.getInstance();
+                        final token = prefs.getString('auth_token');
+
+                        try {
+                          if (newFile == null) {
+                            // Standard JSON PUT
+                            final response = await http.put(
+                              Uri.parse(ApiConstants.baseUrl + '/materials/${material['id']}'),
+                              headers: {
+                                'Authorization': 'Bearer $token',
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                              },
+                              body: jsonEncode({
+                                'title': titleController.text.trim(),
+                                'description': descController.text.trim(),
+                              }),
+                            );
+
+                            if (response.statusCode == 200) {
+                              if (context.mounted) Navigator.pop(context);
+                              _fetchData();
+                              SnackbarHelper.showSuccess(context, 'Material updated successfully');
+                            } else {
+                              final body = jsonDecode(response.body);
+                              SnackbarHelper.showError(context, body['message'] ?? 'Failed to update material');
+                            }
+                          } else {
+                            // Multipart POST with _method=PUT
+                            var request = http.MultipartRequest('POST', Uri.parse(ApiConstants.baseUrl + '/materials/${material['id']}'));
+                            request.headers['Authorization'] = 'Bearer $token';
+                            request.headers['Accept'] = 'application/json';
+                            
+                            request.fields['_method'] = 'PUT';
+                            request.fields['title'] = titleController.text.trim();
+                            request.fields['description'] = descController.text.trim();
+
+                            request.files.add(http.MultipartFile.fromBytes(
+                              'file',
+                              newFile!.bytes!,
+                              filename: newFile!.name,
+                            ));
+
+                            var response = await request.send();
+                            var responseData = await response.stream.bytesToString();
+
+                            if (response.statusCode == 200) {
+                              if (context.mounted) Navigator.pop(context);
+                              _fetchData();
+                              SnackbarHelper.showSuccess(context, 'Material and file updated successfully');
+                            } else {
+                              final body = jsonDecode(responseData);
+                              SnackbarHelper.showError(context, body['message'] ?? 'Failed to update material');
+                            }
+                          }
+                        } catch (e) {
+                          SnackbarHelper.showError(context, 'Network error during update');
+                        } finally {
+                          if (mounted) setModalState(() => isSaving = false);
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: isSaving
+                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text(
+                        'Save Changes',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -425,36 +448,13 @@ class _MaterialManagerPageState extends State<MaterialManagerPage> {
       return;
     }
 
-    showDialog(
+    ModalHelper.showRightSideModal(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            child: Container(
-              width: 500,
-              padding: const EdgeInsets.all(24),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Upload Material',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        if (!isUploading)
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+      title: 'Upload Material',
+      contentBuilder: (context, setModalState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                     DropdownButtonFormField<int>(
                       value: selectedBatchId,
                       decoration: const InputDecoration(labelText: 'Select Batch', border: OutlineInputBorder()),
@@ -512,72 +512,113 @@ class _MaterialManagerPageState extends State<MaterialManagerPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: isUploading
-                            ? null
-                            : () async {
-                                if (titleController.text.trim().isEmpty) {
-                                  SnackbarHelper.showError(context, 'Title is required');
-                                  return;
-                                }
-                                if (selectedFile == null) {
-                                  SnackbarHelper.showError(context, 'Please select a file');
-                                  return;
-                                }
-
-                                setModalState(() => isUploading = true);
-
-                                final prefs = await SharedPreferences.getInstance();
-                                final token = prefs.getString('auth_token');
-
-                                try {
-                                  var request = http.MultipartRequest('POST', Uri.parse(ApiConstants.baseUrl + '/materials'));
-                                  request.headers['Authorization'] = 'Bearer $token';
-                                  request.headers['Accept'] = 'application/json';
-                                  
-                                  request.fields['batch_id'] = selectedBatchId.toString();
-                                  request.fields['title'] = titleController.text.trim();
-                                  request.fields['description'] = descController.text.trim();
-
-                                  request.files.add(http.MultipartFile.fromBytes(
-                                    'file',
-                                    selectedFile!.bytes!,
-                                    filename: selectedFile!.name,
-                                  ));
-
-                                  var streamedResponse = await request.send();
-                                  var response = await http.Response.fromStream(streamedResponse);
-
-                                  if (response.statusCode == 201) {
-                                    Navigator.pop(context);
-                                    _fetchData();
-                                    SnackbarHelper.showSuccess(context, 'Material uploaded successfully');
-                                  } else {
-                                    final body = jsonDecode(response.body);
-                                    SnackbarHelper.showError(context, body['message'] ?? 'Failed to upload material');
-                                  }
-                                } catch (e) {
-                                  SnackbarHelper.showError(context, 'Network error during upload');
-                                } finally {
-                                  if (mounted) setModalState(() => isUploading = false);
-                                }
-                              },
-                        child: isUploading
-                            ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text('Upload Material'),
-                      ),
-                    ),
-                  ],
+          ],
+        );
+      },
+      actionBuilder: (context, setModalState) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: TextButton(
+                onPressed: isUploading ? null : () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
-          );
-        },
-      ),
+            const SizedBox(width: 12),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: ElevatedButton(
+                onPressed: isUploading
+                    ? null
+                    : () async {
+                        if (titleController.text.trim().isEmpty) {
+                          SnackbarHelper.showError(context, 'Title is required');
+                          return;
+                        }
+                        if (selectedFile == null) {
+                          SnackbarHelper.showError(context, 'Please select a file');
+                          return;
+                        }
+
+                        setModalState(() => isUploading = true);
+
+                        final prefs = await SharedPreferences.getInstance();
+                        final token = prefs.getString('auth_token');
+
+                        try {
+                          var request = http.MultipartRequest('POST', Uri.parse(ApiConstants.baseUrl + '/materials'));
+                          request.headers['Authorization'] = 'Bearer $token';
+                          request.headers['Accept'] = 'application/json';
+                          
+                          request.fields['batch_id'] = selectedBatchId.toString();
+                          request.fields['title'] = titleController.text.trim();
+                          request.fields['description'] = descController.text.trim();
+
+                          request.files.add(http.MultipartFile.fromBytes(
+                            'file',
+                            selectedFile!.bytes!,
+                            filename: selectedFile!.name,
+                          ));
+
+                          var streamedResponse = await request.send();
+                          var response = await http.Response.fromStream(streamedResponse);
+
+                          if (response.statusCode == 201) {
+                            if (context.mounted) Navigator.pop(context);
+                            _fetchData();
+                            SnackbarHelper.showSuccess(context, 'Material uploaded successfully');
+                          } else {
+                            final body = jsonDecode(response.body);
+                            SnackbarHelper.showError(context, body['message'] ?? 'Failed to upload material');
+                          }
+                        } catch (e) {
+                          SnackbarHelper.showError(context, 'Network error during upload');
+                        } finally {
+                          if (mounted) setModalState(() => isUploading = false);
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: isUploading
+                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text(
+                        'Upload Material',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -598,7 +639,7 @@ class _MaterialManagerPageState extends State<MaterialManagerPage> {
                   height: 48,
                   child: DropdownButtonFormField<String>(
                     isExpanded: true,
-                    value: _selectedCourseId,
+                    value: _courses.any((c) => c['id'].toString() == _selectedCourseId) ? _selectedCourseId : null,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
@@ -625,7 +666,7 @@ class _MaterialManagerPageState extends State<MaterialManagerPage> {
                   height: 48,
                   child: DropdownButtonFormField<String>(
                     isExpanded: true,
-                    value: _selectedBatchId,
+                    value: _batches.any((b) => b['id'].toString() == _selectedBatchId) ? _selectedBatchId : null,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),

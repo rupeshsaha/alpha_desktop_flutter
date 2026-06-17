@@ -8,9 +8,10 @@ import '../layout/teacher_layout.dart';
 import 'mcq_question_manager_page.dart';
 import 'mcq_paper_results_page.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
-
+import '../core/utils/modal_helper.dart';
 class McqManagerPage extends StatefulWidget {
-  const McqManagerPage({super.key});
+  final String? initialBatchId;
+  const McqManagerPage({super.key, this.initialBatchId});
 
   @override
   State<McqManagerPage> createState() => _McqManagerPageState();
@@ -28,6 +29,9 @@ class _McqManagerPageState extends State<McqManagerPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialBatchId != null) {
+      _selectedBatchId = widget.initialBatchId;
+    }
     _fetchData();
   }
 
@@ -176,45 +180,13 @@ class _McqManagerPageState extends State<McqManagerPage> {
       return;
     }
 
-    showDialog(
+    ModalHelper.showRightSideModal(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              width: 500,
-              padding: const EdgeInsets.all(24),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isEdit ? 'Edit MCQ Paper' : 'Create MCQ Paper',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: IconButton(
-                            icon: const Icon(Icons.close, size: 20),
-                            onPressed: () => Navigator.pop(context),
-                            splashRadius: 20,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+      title: isEdit ? 'Edit MCQ Paper' : 'Create MCQ Paper',
+      contentBuilder: (context, setModalState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                     const Text(
                       'Select Batch',
                       style: TextStyle(fontWeight: FontWeight.w600),
@@ -411,125 +383,123 @@ class _McqManagerPageState extends State<McqManagerPage> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: TextButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18,
-                              ),
-                              minimumSize: const Size(120, 54),
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              if (titleController.text.isEmpty ||
-                                  selectedBatchId == null)
-                                return;
-
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              final token = prefs.getString('auth_token');
-
-                              final url = isEdit
-                                  ? ApiConstants.baseUrl + '/mcq_papers/${paper['id']}'
-                                  : ApiConstants.baseUrl + '/mcq_papers';
-
-                              final requestMethod = isEdit
-                                  ? http.put
-                                  : http.post;
-
-                              try {
-                                final response = await requestMethod(
-                                  Uri.parse(url),
-                                  headers: {
-                                    'Authorization': 'Bearer $token',
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                  },
-                                  body: jsonEncode({
-                                    'batch_id': selectedBatchId,
-                                    'title': titleController.text,
-                                    'description': descController.text,
-                                    'exam_date': dateController.text.isEmpty ? null : dateController.text,
-                                    'exam_password': passwordController.text.isEmpty ? null : passwordController.text,
-                                    'start_time': startTimeController.text.isEmpty ? null : startTimeController.text,
-                                    'end_time': endTimeController.text.isEmpty ? null : endTimeController.text,
-                                    'invigilators': invigilatorsController.text.isEmpty ? null : invigilatorsController.text,
-                                    'is_active': 1,
-                                  }),
-                                );
-
-                                if (response.statusCode == 201 ||
-                                    response.statusCode == 200) {
-                                  if (mounted) Navigator.pop(context);
-                                  _fetchData();
-                                  SnackbarHelper.showSuccess(
-                                    context,
-                                    isEdit
-                                        ? 'Paper updated successfully.'
-                                        : 'Paper created successfully.',
-                                  );
-                                } else {
-                                  SnackbarHelper.showError(
-                                    context,
-                                    'Failed to save paper. Check inputs.',
-                                  );
-                                }
-                              } catch (e) {
-                                SnackbarHelper.showError(
-                                  context,
-                                  'Network error while saving paper.',
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 18,
-                              ),
-                              minimumSize: const Size(160, 54),
-                            ),
-                            child: Text(
-                              isEdit ? 'Save Changes' : 'Create Paper',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+          ],
+        );
+      },
+      actionBuilder: (context, setModalState) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
-          );
-        },
-      ),
+            const SizedBox(width: 16),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (titleController.text.isEmpty ||
+                      selectedBatchId == null)
+                    return;
+
+                  final prefs =
+                      await SharedPreferences.getInstance();
+                  final token = prefs.getString('auth_token');
+
+                  final url = isEdit
+                      ? ApiConstants.baseUrl + '/mcq_papers/${paper['id']}'
+                      : ApiConstants.baseUrl + '/mcq_papers';
+
+                  final requestMethod = isEdit
+                      ? http.put
+                      : http.post;
+
+                  try {
+                    final response = await requestMethod(
+                      Uri.parse(url),
+                      headers: {
+                        'Authorization': 'Bearer $token',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                      },
+                      body: jsonEncode({
+                        'batch_id': selectedBatchId,
+                        'title': titleController.text,
+                        'description': descController.text,
+                        'exam_date': dateController.text.isEmpty ? null : dateController.text,
+                        'exam_password': passwordController.text.isEmpty ? null : passwordController.text,
+                        'start_time': startTimeController.text.isEmpty ? null : startTimeController.text,
+                        'end_time': endTimeController.text.isEmpty ? null : endTimeController.text,
+                        'invigilators': invigilatorsController.text.isEmpty ? null : invigilatorsController.text,
+                        'is_active': 1,
+                      }),
+                    );
+
+                    if (response.statusCode == 201 ||
+                        response.statusCode == 200) {
+                      if (context.mounted) Navigator.pop(context);
+                      _fetchData();
+                      SnackbarHelper.showSuccess(
+                        context,
+                        isEdit
+                            ? 'Paper updated successfully.'
+                            : 'Paper created successfully.',
+                      );
+                    } else {
+                      SnackbarHelper.showError(
+                        context,
+                        'Failed to save paper. Check inputs.',
+                      );
+                    }
+                  } catch (e) {
+                    SnackbarHelper.showError(
+                      context,
+                      'Network error while saving paper.',
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(160, 54),
+                ),
+                child: Text(
+                  isEdit ? 'Save Changes' : 'Create Paper',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -550,7 +520,7 @@ class _McqManagerPageState extends State<McqManagerPage> {
                   height: 48,
                   child: DropdownButtonFormField<String>(
                     isExpanded: true,
-                    value: _selectedCourseId,
+                    value: _courses.any((c) => c['id'].toString() == _selectedCourseId) ? _selectedCourseId : null,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
@@ -575,7 +545,7 @@ class _McqManagerPageState extends State<McqManagerPage> {
                         height: 48,
                         child: DropdownButtonFormField<String>(
                           isExpanded: true,
-                          value: _selectedBatchId,
+                          value: _batches.where((b) => b['course_id'].toString() == _selectedCourseId).any((b) => b['id'].toString() == _selectedBatchId) ? _selectedBatchId : null,
                           decoration: InputDecoration(
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
