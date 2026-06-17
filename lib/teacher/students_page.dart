@@ -8,9 +8,11 @@ import 'package:file_selector/file_selector.dart';
 import '../layout/teacher_layout.dart';
 import 'student_view_page.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
+import '../core/utils/modal_helper.dart';
 
 class StudentsPage extends StatefulWidget {
-  const StudentsPage({super.key});
+  final String? initialBatchId;
+  const StudentsPage({super.key, this.initialBatchId});
 
   @override
   State<StudentsPage> createState() => _StudentsPageState();
@@ -21,7 +23,6 @@ class _StudentsPageState extends State<StudentsPage> {
   List<dynamic> _batches = [];
   bool _isLoading = true;
   String _searchQuery = '';
-  String _statusFilter = 'all';
   String? _courseFilter;
   String? _batchFilter;
   List<dynamic> _courses = [];
@@ -29,6 +30,9 @@ class _StudentsPageState extends State<StudentsPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialBatchId != null) {
+      _batchFilter = widget.initialBatchId;
+    }
     _fetchData();
   }
 
@@ -63,8 +67,6 @@ class _StudentsPageState extends State<StudentsPage> {
           .replace(
             queryParameters: {
               if (_searchQuery.isNotEmpty) 'search': _searchQuery,
-              if (_statusFilter != 'all')
-                'is_active': _statusFilter == 'active' ? 'true' : 'false',
               if (_courseFilter != null) 'course_id': _courseFilter,
               if (_batchFilter != null) 'batch_id': _batchFilter,
             },
@@ -153,69 +155,6 @@ class _StudentsPageState extends State<StudentsPage> {
     }
   }
 
-  Future<void> _toggleStatus(int id, bool currentStatus) async {
-    final actionText = currentStatus ? 'Deactivate' : 'Activate';
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        title: Text('Confirm $actionText'),
-        content: Text(
-          'Are you sure you want to ${actionText.toLowerCase()} this item?',
-        ),
-        actions: [
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-          ),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(
-                foregroundColor: currentStatus ? Colors.red : Colors.green,
-              ),
-              child: Text(actionText),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-
-    try {
-      final response = await http.put(
-        Uri.parse(ApiConstants.baseUrl + '/students/$id'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'is_active': !currentStatus}),
-      );
-
-      if (response.statusCode == 200) {
-        // Find fetch method (e.g. _fetchCourses)
-
-        _fetchData();
-        SnackbarHelper.showSuccess(
-          context,
-          'Status ${currentStatus ? "deactivated" : "activated"} successfully.',
-        );
-      } else {
-        SnackbarHelper.showError(context, 'Failed to update status.');
-      }
-    } catch (e) {
-      SnackbarHelper.showError(context, 'Network error while updating status.');
-    }
-  }
 
   void _showStudentModal({Map<String, dynamic>? student}) {
     final isEdit = student != null;
@@ -234,51 +173,17 @@ class _StudentsPageState extends State<StudentsPage> {
     String? dob = isEdit ? student['dob'] : null;
     String? gender = isEdit ? student['gender'] : null;
 
-    bool isActive = isEdit
-        ? (student['is_active'] == 1 || student['is_active'] == true)
-        : true;
     XFile? selectedImage;
     Uint8List? selectedImageBytes;
 
-    showDialog(
+    ModalHelper.showRightSideModal(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              width: 500,
-              padding: const EdgeInsets.all(24),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isEdit ? 'Edit Student' : 'Add New Student',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: IconButton(
-                            icon: const Icon(Icons.close, size: 20),
-                            onPressed: () => Navigator.pop(context),
-                            splashRadius: 20,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    // --- Required Fields ---
+      title: isEdit ? 'Edit Student' : 'Add New Student',
+      contentBuilder: (context, setModalState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- Required Fields ---
                     Text(
                       'Required Fields',
                       style: TextStyle(
@@ -507,194 +412,173 @@ class _StudentsPageState extends State<StudentsPage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Theme(
-                      data: Theme.of(context).copyWith(
-                        splashColor: Colors.transparent,
-                        highlightColor: Colors.transparent,
-                        hoverColor: Colors.transparent,
-                      ),
-                      child: SwitchListTile(
-                        title: const Text('Is Active'),
-                        value: isActive,
-                        onChanged: (val) {
-                          setModalState(() {
-                            isActive = val;
-                          });
-                        },
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: TextButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18,
-                              ),
-                              minimumSize: const Size(120, 54),
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              if (nameController.text.isEmpty ||
-                                  emailController.text.isEmpty) {
-                                SnackbarHelper.showError(
-                                  context,
-                                  'Please fill in all required fields.',
-                                );
-                                return;
-                              }
-                              if (!isEdit && passwordController.text.isEmpty) {
-                                SnackbarHelper.showError(
-                                  context,
-                                  'Password is required for new students.',
-                                );
-                                return;
-                              }
-
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              final token = prefs.getString('auth_token');
-
-                              final url = isEdit
-                                  ? ApiConstants.baseUrl + '/students/${student['id']}'
-                                  : ApiConstants.baseUrl + '/students';
-
-                              final requestMethod = isEdit
-                                  ? http.put
-                                  : http.post;
-
-                              final Map<String, dynamic> bodyData = {
-                                'name': nameController.text,
-                                'email': emailController.text,
-                                'is_active': isActive ? '1' : '0',
-                                'father_name': fatherNameController.text.isEmpty ? null : fatherNameController.text,
-                                'phone': phoneController.text.isEmpty ? null : phoneController.text,
-                                'registration_id': registrationIdController.text.isEmpty ? null : registrationIdController.text,
-                                'address': addressController.text.isEmpty ? null : addressController.text,
-                                'dob': dob,
-                                'gender': gender,
-                              };
-
-                              if (passwordController.text.isNotEmpty) {
-                                bodyData['password'] = passwordController.text;
-                              }
-
-                              try {
-                                var request = http.MultipartRequest(
-                                  isEdit ? 'POST' : 'POST',
-                                  Uri.parse(url),
-                                );
-                                
-                                request.headers['Authorization'] = 'Bearer $token';
-                                request.headers['Accept'] = 'application/json';
-
-                                if (isEdit) {
-                                  request.fields['_method'] = 'PUT';
-                                }
-
-                                bodyData.forEach((key, value) {
-                                  if (value != null) {
-                                    request.fields[key] = value.toString();
-                                  }
-                                });
-
-                                if (selectedImageBytes != null) {
-                                  request.files.add(
-                                    http.MultipartFile.fromBytes(
-                                      'profile_image',
-                                      selectedImageBytes!,
-                                      filename: selectedImage!.name,
-                                    ),
-                                  );
-                                }
-
-                                final streamedResponse = await request.send();
-                                final response = await http.Response.fromStream(streamedResponse);
-
-                                if (response.statusCode == 201 || response.statusCode == 200) {
-                                  if (mounted) Navigator.pop(context);
-                                  _fetchData();
-                                  SnackbarHelper.showSuccess(
-                                    context,
-                                    isEdit
-                                        ? 'Student updated successfully.'
-                                        : 'Student registered successfully.',
-                                  );
-                                } else if (response.statusCode == 422) {
-                                  final data = jsonDecode(response.body);
-                                  String errorMsg =
-                                      data['message'] ?? 'Validation error.';
-                                  if (data['errors'] != null) {
-                                    final errors =
-                                        data['errors'] as Map<String, dynamic>;
-                                    if (errors.isNotEmpty) {
-                                      errorMsg = errors.values.first[0];
-                                    }
-                                  }
-                                  SnackbarHelper.showError(context, errorMsg);
-                                } else {
-                                  SnackbarHelper.showError(
-                                    context,
-                                    'Failed to save student. Email might already exist.',
-                                  );
-                                }
-                              } catch (e) {
-                                SnackbarHelper.showError(
-                                  context,
-                                  'Network error while saving student.',
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 18,
-                              ),
-                              minimumSize: const Size(120, 54),
-                            ),
-                            child: Text(
-                              isEdit ? 'Save Changes' : 'Register Student',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+          ],
+        );
+      },
+      actionBuilder: (context, setModalState) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
-          );
-        },
-      ),
+            const SizedBox(width: 12),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (nameController.text.isEmpty ||
+                      emailController.text.isEmpty) {
+                    SnackbarHelper.showError(
+                      context,
+                      'Please fill in all required fields.',
+                    );
+                    return;
+                  }
+                  if (!isEdit && passwordController.text.isEmpty) {
+                    SnackbarHelper.showError(
+                      context,
+                      'Password is required for new students.',
+                    );
+                    return;
+                  }
+
+                  final prefs =
+                      await SharedPreferences.getInstance();
+                  final token = prefs.getString('auth_token');
+
+                  final url = isEdit
+                      ? ApiConstants.baseUrl + '/students/${student['id']}'
+                      : ApiConstants.baseUrl + '/students';
+
+                  final requestMethod = isEdit
+                      ? http.put
+                      : http.post;
+
+                  final Map<String, dynamic> bodyData = {
+                    'name': nameController.text,
+                    'email': emailController.text,
+                    'is_active': '1',
+                    'father_name': fatherNameController.text.isEmpty ? null : fatherNameController.text,
+                    'phone': phoneController.text.isEmpty ? null : phoneController.text,
+                    'registration_id': registrationIdController.text.isEmpty ? null : registrationIdController.text,
+                    'address': addressController.text.isEmpty ? null : addressController.text,
+                    'dob': dob,
+                    'gender': gender,
+                  };
+
+                  if (passwordController.text.isNotEmpty) {
+                    bodyData['password'] = passwordController.text;
+                  }
+
+                  try {
+                    var request = http.MultipartRequest(
+                      isEdit ? 'POST' : 'POST',
+                      Uri.parse(url),
+                    );
+                    
+                    request.headers['Authorization'] = 'Bearer $token';
+                    request.headers['Accept'] = 'application/json';
+
+                    if (isEdit) {
+                      request.fields['_method'] = 'PUT';
+                    }
+
+                    bodyData.forEach((key, value) {
+                      if (value != null) {
+                        request.fields[key] = value.toString();
+                      }
+                    });
+
+                    if (selectedImageBytes != null) {
+                      request.files.add(
+                        http.MultipartFile.fromBytes(
+                          'profile_image',
+                          selectedImageBytes!,
+                          filename: selectedImage!.name,
+                        ),
+                      );
+                    }
+
+                    final streamedResponse = await request.send();
+                    final response = await http.Response.fromStream(streamedResponse);
+
+                    if (response.statusCode == 201 || response.statusCode == 200) {
+                      if (context.mounted) Navigator.pop(context);
+                      _fetchData();
+                      SnackbarHelper.showSuccess(
+                        context,
+                        isEdit
+                            ? 'Student updated successfully.'
+                            : 'Student registered successfully.',
+                      );
+                    } else if (response.statusCode == 422) {
+                      final data = jsonDecode(response.body);
+                      String errorMsg =
+                          data['message'] ?? 'Validation error.';
+                      if (data['errors'] != null) {
+                        final errors =
+                            data['errors'] as Map<String, dynamic>;
+                        if (errors.isNotEmpty) {
+                          errorMsg = errors.values.first[0];
+                        }
+                      }
+                      SnackbarHelper.showError(context, errorMsg);
+                    } else {
+                      SnackbarHelper.showError(
+                        context,
+                        'Failed to save student. Email might already exist.',
+                      );
+                    }
+                  } catch (e) {
+                    SnackbarHelper.showError(
+                      context,
+                      'Network error while saving student.',
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: Text(
+                  isEdit ? 'Save Changes' : 'Register Student',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -707,195 +591,117 @@ class _StudentsPageState extends State<StudentsPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(32.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Student Management',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Register students and assign them to batches.',
-                        style: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 800;
+
+                final courseFilter = SizedBox(
+                  height: 48,
+                  child: DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    value: _courses.any((c) => c['id'].toString() == _courseFilter) ? _courseFilter : null,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      hintText: 'All Courses',
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('All Courses')),
+                      ..._courses.map((c) => DropdownMenuItem(value: c['id'].toString(), child: Text(c['name']))),
                     ],
+                    onChanged: (val) {
+                      setState(() {
+                        _courseFilter = val;
+                        _batchFilter = null; // Reset batch filter when course changes
+                      });
+                      _fetchData();
+                    },
                   ),
-                ),
-                Row(
+                );
+
+                final batchFilter = SizedBox(
+                  height: 48,
+                  child: DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    value: _batches.any((b) => b['id'].toString() == _batchFilter) ? _batchFilter : null,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      hintText: 'All Batches',
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('All Batches')),
+                      ..._batches.map((b) => DropdownMenuItem(value: b['id'].toString(), child: Text(b['name']))),
+                    ],
+                    onChanged: (val) {
+                      setState(() => _batchFilter = val);
+                      _fetchData();
+                    },
+                  ),
+                );
+
+
+                final searchBox = SizedBox(
+                  height: 48,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search students...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        _searchQuery = val;
+                      });
+                      _fetchData();
+                    },
+                  ),
+                );
+
+                final actionBtn = SizedBox(
+                  height: 48,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showStudentModal(),
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('New Student'),
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+                      ),
+                    ),
+                  ),
+                );
+
+                if (isMobile) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      courseFilter,
+                      const SizedBox(height: 16),
+                      batchFilter,
+                      const SizedBox(height: 16),
+                      searchBox,
+                      const SizedBox(height: 16),
+                      actionBtn,
+                    ],
+                  );
+                }
+
+                return Row(
                   children: [
-                    SizedBox(
-                      height: 48,
-                      width: 160,
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        value: _courseFilter,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 0,
-                          ),
-                          hintText: 'All Courses',
-                        ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('All Courses'),
-                          ),
-                          ..._courses.map(
-                            (c) => DropdownMenuItem(
-                              value: c['id'].toString(),
-                              child: Text(c['name']),
-                            ),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          setState(() {
-                            _courseFilter = val;
-                            _batchFilter =
-                                null; // Reset batch filter when course changes
-                          });
-                          _fetchData();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      height: 48,
-                      width: 160,
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        value: _batchFilter,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 0,
-                          ),
-                          hintText: 'All Batches',
-                        ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('All Batches'),
-                          ),
-                          ..._batches.map(
-                            (b) => DropdownMenuItem(
-                              value: b['id'].toString(),
-                              child: Text(b['name']),
-                            ),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          setState(() => _batchFilter = val);
-                          _fetchData();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      height: 48,
-                      width: 150,
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        value: _statusFilter,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 0,
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'all',
-                            child: Text('All Statuses'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'active',
-                            child: Text('Active Only'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'inactive',
-                            child: Text('Inactive Only'),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() => _statusFilter = val);
-                            _fetchData();
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      height: 48,
-                      width: 250,
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Search students...',
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 0,
-                          ),
-                        ),
-                        onChanged: (val) {
-                          setState(() {
-                            _searchQuery = val;
-                          });
-                          _fetchData();
-                        },
-                      ),
-                    ),
+                    Expanded(flex: 1, child: courseFilter),
                     const SizedBox(width: 16),
-                    SizedBox(
-                      height: 48,
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showStudentModal(),
-                          icon: const Icon(Icons.person_add),
-                          label: const Text('New Student'),
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 18,
-                            ),
-                            minimumSize: const Size(120, 54),
-                          ),
-                        ),
-                      ),
-                    ),
+                    Expanded(flex: 1, child: batchFilter),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 2, child: searchBox),
+                    const SizedBox(width: 16),
+                    actionBtn,
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
           Expanded(
@@ -954,13 +760,9 @@ class _StudentsPageState extends State<StudentsPage> {
                                   DataColumn(label: Text('Student Name')),
                                   DataColumn(label: Text('Email')),
                                   DataColumn(label: Text('Batch')),
-                                  DataColumn(label: Text('Status')),
                                   DataColumn(label: Text('Actions')),
                                 ],
                                 rows: _students.map<DataRow>((student) {
-                                  final isActive =
-                                      student['is_active'] == 1 ||
-                                      student['is_active'] == true;
                                   return DataRow(
                                     cells: [
                                       DataCell(Text(student['id'].toString())),
@@ -1033,32 +835,7 @@ class _StudentsPageState extends State<StudentsPage> {
                                           ],
                                         ),
                                       ),
-                                      DataCell(
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: isActive
-                                                ? Colors.green.withOpacity(0.1)
-                                                : Colors.red.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            isActive ? 'Active' : 'Inactive',
-                                            style: TextStyle(
-                                              color: isActive
-                                                  ? Colors.green
-                                                  : Colors.red,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
+
                                       DataCell(
                                         Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -1079,28 +856,7 @@ class _StudentsPageState extends State<StudentsPage> {
                                                 },
                                               ),
                                             ),
-                                            MouseRegion(
-                                              cursor: SystemMouseCursors.click,
-                                              child: IconButton(
-                                                icon: Icon(
-                                                  isActive
-                                                      ? Icons.visibility
-                                                      : Icons.visibility_off,
-                                                  size: 20,
-                                                ),
-                                                color: isActive
-                                                    ? Colors.green
-                                                    : Colors.grey,
-                                                tooltip: isActive
-                                                    ? 'Mark Inactive'
-                                                    : 'Mark Active',
-                                                onPressed: () => _toggleStatus(
-                                                  student['id'],
-                                                  isActive,
-                                                ),
-                                                splashRadius: 20,
-                                              ),
-                                            ),
+
                                             MouseRegion(
                                               cursor: SystemMouseCursors.click,
                                               child: IconButton(
