@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../layout/student_layout.dart';
+import 'student_dashboard.dart';
 import '../core/utils/snackbar_helper.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
 
@@ -83,6 +84,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
 
     return StudentLayout(
       title: 'My Profile',
+      onBackPressed: () => Navigator.pop(context),
       child: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _profile == null

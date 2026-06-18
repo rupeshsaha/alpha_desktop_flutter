@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:alpha_desktop_flutter/core/utils/snackbar_helper.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../layout/teacher_layout.dart';
+import 'teacher_dashboard.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
 import '../core/utils/modal_helper.dart';
 
@@ -626,6 +627,7 @@ class _MaterialManagerPageState extends State<MaterialManagerPage> {
   Widget build(BuildContext context) {
     return TeacherLayout(
       title: 'Study Materials',
+      onBackPressed: () => Navigator.pop(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

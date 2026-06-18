@@ -5,6 +5,7 @@ import '../core/constants/api_constants.dart';
 import '../core/services/settings_service.dart';
 import '../core/utils/snackbar_helper.dart';
 import '../layout/teacher_layout.dart';
+import 'teacher_dashboard.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -103,6 +104,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     return TeacherLayout(
       title: 'Settings',
+      onBackPressed: () => Navigator.pop(context),
       child: _isLoading 
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(

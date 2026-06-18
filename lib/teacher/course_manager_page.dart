@@ -7,6 +7,7 @@ import '../layout/teacher_layout.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
 import '../core/utils/modal_helper.dart';
 import 'batch_manager_page.dart';
+import 'teacher_dashboard.dart';
 
 class CourseManagerPage extends StatefulWidget {
   const CourseManagerPage({super.key});
@@ -136,6 +137,10 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
     final descController = TextEditingController(
       text: isEdit ? course['description'] : '',
     );
+    final topicInputController = TextEditingController();
+    final List<String> topicsList = isEdit
+        ? (course['topics'] as List?)?.map((t) => t['title'].toString()).toList() ?? []
+        : [];
 
     ModalHelper.showRightSideModal(
       context: context,
@@ -144,35 +149,154 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: InputDecoration(
-                        labelText: 'Course Name',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'Course Name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descController,
+              decoration: InputDecoration(
+                labelText: 'Description (Optional)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            Text(
+              'Course Topics / Chapters',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: topicInputController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g., Introduction to CSS',
+                      labelText: 'Add Topic Title',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                    onSubmitted: (val) {
+                      if (val.trim().isNotEmpty) {
+                        setModalState(() {
+                          topicsList.add(val.trim());
+                          topicInputController.clear();
+                        });
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final val = topicInputController.text;
+                      if (val.trim().isNotEmpty) {
+                        setModalState(() {
+                          topicsList.add(val.trim());
+                          topicInputController.clear();
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (topicsList.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'No topics added yet.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: topicsList.length,
+                itemBuilder: (context, index) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border.all(color: Colors.grey.withOpacity(0.15)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 12,
+                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        child: Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
+                      ),
+                      title: Text(
+                        topicsList[index],
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                      trailing: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                          onPressed: () {
+                            setModalState(() {
+                              topicsList.removeAt(index);
+                            });
+                          },
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: descController,
-                      decoration: InputDecoration(
-                        labelText: 'Description (Optional)',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                      ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 32),
+                  );
+                },
+              ),
           ],
         );
       },
@@ -237,6 +361,7 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
                         'name': nameController.text,
                         'description': descController.text,
                         'is_active': true,
+                        'topics': topicsList,
                       }),
                     );
 
@@ -300,10 +425,262 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
     );
   }
 
+  void _showTopicsModal(Map<String, dynamic> course) {
+    final topicInputController = TextEditingController();
+    final List<String> topicsList = (course['topics'] as List?)
+            ?.map((t) => t['title'].toString())
+            .toList() ??
+        [];
+
+    ModalHelper.showRightSideModal(
+      context: context,
+      title: 'Course Topics - ${course['name']}',
+      contentBuilder: (context, setModalState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Add or remove topics for this course. Click "Save Changes" at the bottom to apply.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: topicInputController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g., Introduction to CSS',
+                      labelText: 'Topic Title',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                    onSubmitted: (val) {
+                      if (val.trim().isNotEmpty) {
+                        setModalState(() {
+                          topicsList.add(val.trim());
+                          topicInputController.clear();
+                        });
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final val = topicInputController.text;
+                      if (val.trim().isNotEmpty) {
+                        setModalState(() {
+                          topicsList.add(val.trim());
+                          topicInputController.clear();
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Topics / Chapters List (${topicsList.length})',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (topicsList.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                child: Center(
+                  child: Text(
+                    'No topics added yet.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: topicsList.length,
+                itemBuilder: (context, index) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border.all(color: Colors.grey.withOpacity(0.15)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 12,
+                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        child: Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        topicsList[index],
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                      trailing: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                          onPressed: () {
+                            setModalState(() {
+                              topicsList.removeAt(index);
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        );
+      },
+      actionBuilder: (context, setModalState) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  final token = prefs.getString('auth_token');
+                  final url = ApiConstants.baseUrl + '/courses/${course['id']}';
+
+                  try {
+                    final response = await http.put(
+                      Uri.parse(url),
+                      headers: {
+                        'Authorization': 'Bearer $token',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                      },
+                      body: jsonEncode({
+                        'name': course['name'],
+                        'description': course['description'],
+                        'is_active': true,
+                        'topics': topicsList,
+                      }),
+                    );
+
+                    if (response.statusCode == 200) {
+                      if (context.mounted) Navigator.pop(context);
+                      _fetchCourses();
+                      SnackbarHelper.showSuccess(
+                        context,
+                        'Topics updated successfully.',
+                      );
+                    } else if (response.statusCode == 422) {
+                      final data = jsonDecode(response.body);
+                      String errorMsg = data['message'] ?? 'Validation error.';
+                      if (data['errors'] != null) {
+                        final errors = data['errors'] as Map<String, dynamic>;
+                        if (errors.isNotEmpty) {
+                          errorMsg = errors.values.first[0];
+                        }
+                      }
+                      SnackbarHelper.showError(context, errorMsg);
+                    } else {
+                      SnackbarHelper.showError(
+                        context,
+                        'Failed to save topics.',
+                      );
+                    }
+                  } catch (e) {
+                    SnackbarHelper.showError(
+                      context,
+                      'Network error while saving topics.',
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 18,
+                  ),
+                  minimumSize: const Size(120, 54),
+                ),
+                child: const Text(
+                  'Save Changes',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return TeacherLayout(
       title: 'Courses',
+      onBackPressed: () => Navigator.pop(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -420,10 +797,11 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
                                 ),
                                 dataRowMinHeight: 80,
                                 dataRowMaxHeight: 90,
-                                columns: const [
+                                 columns: const [
                                   DataColumn(label: Text('ID')),
                                   DataColumn(label: Text('Course Name')),
                                   DataColumn(label: Text('Description')),
+                                  DataColumn(label: Text('Topics / Chapters')),
                                   DataColumn(label: Text('Actions')),
                                 ],
                                 rows: _courses.map<DataRow>((course) {
@@ -448,6 +826,22 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
                                           ),
                                         ),
                                       ),
+                                      DataCell(
+                                        ElevatedButton.icon(
+                                          onPressed: () => _showTopicsModal(course),
+                                          icon: const Icon(Icons.list_alt, size: 16),
+                                          label: Text('View Topics (${(course['topics'] as List?)?.length ?? 0})'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                                            foregroundColor: Theme.of(context).colorScheme.primary,
+                                            shadowColor: Colors.transparent,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          ),
+                                        ),
+                                      ),
 
                                       DataCell(
                                         Row(
@@ -455,15 +849,9 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
                                           children: [
                                             MouseRegion(
                                               cursor: SystemMouseCursors.click,
-                                              child: IconButton(
-                                                icon: const Icon(
-                                                  Icons.visibility,
-                                                  color: Colors.green,
-                                                  size: 20,
-                                                ),
-                                                tooltip: 'View Batches',
+                                              child: TextButton.icon(
                                                 onPressed: () {
-                                                  Navigator.pushReplacement(
+                                                  Navigator.push(
                                                     context,
                                                     PageRouteBuilder(
                                                       pageBuilder: (context, animation, secondaryAnimation) => BatchManagerPage(initialCourseId: course['id'].toString()),
@@ -472,9 +860,23 @@ class _CourseManagerPageState extends State<CourseManagerPage> {
                                                     ),
                                                   );
                                                 },
-                                                splashRadius: 20,
+                                                icon: const Icon(Icons.link, size: 16, color: Colors.green),
+                                                label: const Text(
+                                                  'View Batches',
+                                                  style: TextStyle(
+                                                    color: Colors.green,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                style: TextButton.styleFrom(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                ),
                                               ),
                                             ),
+                                            const SizedBox(width: 8),
                                             MouseRegion(
                                               cursor: SystemMouseCursors.click,
                                               child: IconButton(

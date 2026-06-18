@@ -149,20 +149,27 @@ class _LoginPageState extends State<LoginPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Logo (Exactly like Sidebar)
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 160,
+            height: 160,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: theme.colorScheme.primary.withOpacity(0.05),
-              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+              color: Colors.white,
+              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: ClipOval(
               child: Image.asset(
                 'assets/images/logo.png',
-                width: 120,
-                height: 120,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Icon(Icons.computer, size: 80, color: theme.colorScheme.primary),
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Icon(Icons.computer, size: 60, color: theme.colorScheme.primary),
               ),
             ),
           ),

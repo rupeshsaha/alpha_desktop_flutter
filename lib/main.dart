@@ -7,6 +7,8 @@ import 'teacher/teacher_dashboard.dart';
 import 'student/student_dashboard.dart';
 import 'core/services/settings_service.dart';
 
+import 'core/widgets/app_zoom_scaler.dart';
+
 final ThemeController themeController = ThemeController();
 
 void main() async {
@@ -47,6 +49,9 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           home: initialPage,
+          builder: (context, child) {
+            return AppZoomScaler(child: child!);
+          },
         );
       },
     );

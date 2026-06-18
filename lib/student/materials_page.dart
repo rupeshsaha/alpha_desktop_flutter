@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:alpha_desktop_flutter/core/utils/snackbar_helper.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../layout/student_layout.dart';
+import 'student_dashboard.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
 
 class MaterialsPage extends StatefulWidget {
@@ -171,6 +172,7 @@ class _MaterialsPageState extends State<MaterialsPage> {
   Widget build(BuildContext context) {
     return StudentLayout(
       title: 'Study Materials',
+      onBackPressed: () => Navigator.pop(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

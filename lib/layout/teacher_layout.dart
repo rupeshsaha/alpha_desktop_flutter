@@ -182,7 +182,7 @@ class _TeacherLayoutState extends State<TeacherLayout> {
       {'title': 'Courses', 'icon': Icons.menu_book_outlined, 'activeIcon': Icons.menu_book, 'isActive': title == 'Courses', 'page': const CourseManagerPage()},
       {'title': 'Batches', 'icon': Icons.layers_outlined, 'activeIcon': Icons.layers, 'isActive': title == 'Batches', 'page': const BatchManagerPage()},
       {'title': 'Students', 'icon': Icons.people_outline, 'activeIcon': Icons.people, 'isActive': title == 'Students', 'page': const StudentsPage()},
-      {'title': 'MCQ Papers', 'icon': Icons.assignment_outlined, 'activeIcon': Icons.assignment, 'isActive': title == 'MCQ Papers', 'page': const McqManagerPage()},
+      {'title': 'Questions', 'icon': Icons.assignment_outlined, 'activeIcon': Icons.assignment, 'isActive': title == 'MCQ Papers', 'page': const McqManagerPage()},
       {'title': 'Leaderboard', 'icon': Icons.leaderboard_outlined, 'activeIcon': Icons.leaderboard, 'isActive': title.contains('Leaderboard'), 'page': const TeacherGlobalLeaderboardPage()},
       {'title': 'Study Materials', 'icon': Icons.library_books_outlined, 'activeIcon': Icons.library_books, 'isActive': title == 'Study Materials', 'page': const MaterialManagerPage()},
       {'title': 'Student Feedbacks', 'icon': Icons.feedback_outlined, 'activeIcon': Icons.feedback, 'isActive': title == 'Student Feedbacks', 'page': const FeedbackManagerPage()},
@@ -294,14 +294,18 @@ class _TeacherLayoutState extends State<TeacherLayout> {
                     onTap: () {
                       if (isDrawer) Navigator.pop(context); // close drawer
                       if (!isSelected && item['page'] != null) {
-                        Navigator.pushReplacement(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (context, animation1, animation2) => item['page'],
-                            transitionDuration: Duration.zero,
-                            reverseTransitionDuration: Duration.zero,
-                          ),
-                        );
+                        if (item['title'] == 'Dashboard') {
+                          Navigator.popUntil(context, (route) => route.isFirst);
+                        } else {
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              pageBuilder: (context, animation1, animation2) => item['page'],
+                              transitionDuration: Duration.zero,
+                              reverseTransitionDuration: Duration.zero,
+                            ),
+                          );
+                        }
                       }
                     },
                     child: Container(

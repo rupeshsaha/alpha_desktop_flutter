@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../layout/student_layout.dart';
+import 'student_dashboard.dart';
 import '../core/utils/snackbar_helper.dart';
 import 'exam_taking_page.dart';
 import 'leaderboard_page.dart';
@@ -243,6 +244,7 @@ class _ExamsPageState extends State<ExamsPage> {
 
     return StudentLayout(
       title: 'Exams',
+      onBackPressed: () => Navigator.pop(context),
       child: SizedBox(
         width: double.infinity,
         child: _isLoading

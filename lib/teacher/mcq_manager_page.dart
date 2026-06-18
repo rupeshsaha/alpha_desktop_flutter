@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../layout/teacher_layout.dart';
 import 'mcq_question_manager_page.dart';
 import 'mcq_paper_results_page.dart';
+import 'teacher_dashboard.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
 import '../core/utils/modal_helper.dart';
 class McqManagerPage extends StatefulWidget {
@@ -527,6 +528,7 @@ class _McqManagerPageState extends State<McqManagerPage> {
   Widget build(BuildContext context) {
     return TeacherLayout(
       title: 'MCQ Papers',
+      onBackPressed: () => Navigator.pop(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -656,7 +658,7 @@ class _McqManagerPageState extends State<McqManagerPage> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _papers.isEmpty
-                ? const Center(child: Text('No MCQ papers found.'))
+                ? const Center(child: Text('No Questions Paper found.'))
                 : SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 32,

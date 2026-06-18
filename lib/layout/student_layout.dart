@@ -294,14 +294,18 @@ class _StudentLayoutState extends State<StudentLayout> {
                     onTap: () {
                       if (isDrawer) Navigator.pop(context); // close drawer
                       if (!isSelected && item['page'] != null) {
-                        Navigator.pushReplacement(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) => item['page'],
-                            transitionDuration: Duration.zero,
-                            reverseTransitionDuration: Duration.zero,
-                          ),
-                        );
+                        if (item['title'] == 'Dashboard') {
+                          Navigator.popUntil(context, (route) => route.isFirst);
+                        } else {
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              pageBuilder: (context, animation, secondaryAnimation) => item['page'],
+                              transitionDuration: Duration.zero,
+                              reverseTransitionDuration: Duration.zero,
+                            ),
+                          );
+                        }
                       }
                     },
                     child: Container(

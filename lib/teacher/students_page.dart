@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_selector/file_selector.dart';
 import '../layout/teacher_layout.dart';
 import 'student_view_page.dart';
+import 'teacher_dashboard.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
 import '../core/utils/modal_helper.dart';
 
@@ -642,6 +643,7 @@ class _StudentsPageState extends State<StudentsPage> {
   Widget build(BuildContext context) {
     return TeacherLayout(
       title: 'Students',
+      onBackPressed: () => Navigator.pop(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

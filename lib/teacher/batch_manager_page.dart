@@ -9,6 +9,7 @@ import '../core/utils/modal_helper.dart';
 import 'students_page.dart';
 import 'mcq_manager_page.dart';
 import 'material_manager_page.dart';
+import 'teacher_dashboard.dart';
 
 class BatchManagerPage extends StatefulWidget {
   final String? initialCourseId;
@@ -428,6 +429,7 @@ class _BatchManagerPageState extends State<BatchManagerPage> {
   Widget build(BuildContext context) {
     return TeacherLayout(
       title: 'Batches',
+      onBackPressed: () => Navigator.pop(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -645,7 +647,7 @@ class _BatchManagerPageState extends State<BatchManagerPage> {
                                                 ),
                                                 tooltip: 'View Students',
                                                 onPressed: () {
-                                                  Navigator.pushReplacement(
+                                                  Navigator.push(
                                                     context,
                                                     PageRouteBuilder(
                                                       pageBuilder: (context, animation, secondaryAnimation) => StudentsPage(initialBatchId: batch['id'].toString()),
@@ -667,7 +669,7 @@ class _BatchManagerPageState extends State<BatchManagerPage> {
                                                 ),
                                                 tooltip: 'View MCQ Papers',
                                                 onPressed: () {
-                                                  Navigator.pushReplacement(
+                                                  Navigator.push(
                                                     context,
                                                     PageRouteBuilder(
                                                       pageBuilder: (context, animation, secondaryAnimation) => McqManagerPage(initialBatchId: batch['id'].toString()),
@@ -689,7 +691,7 @@ class _BatchManagerPageState extends State<BatchManagerPage> {
                                                 ),
                                                 tooltip: 'View Materials',
                                                 onPressed: () {
-                                                  Navigator.pushReplacement(
+                                                  Navigator.push(
                                                     context,
                                                     PageRouteBuilder(
                                                       pageBuilder: (context, animation, secondaryAnimation) => MaterialManagerPage(initialBatchId: batch['id'].toString()),

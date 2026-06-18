@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../layout/teacher_layout.dart';
+import 'teacher_dashboard.dart';
 import '../core/utils/snackbar_helper.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
 
@@ -59,6 +60,7 @@ class _TeacherGlobalLeaderboardPageState extends State<TeacherGlobalLeaderboardP
 
     return TeacherLayout(
       title: 'Global Leaderboard',
+      onBackPressed: () => Navigator.pop(context),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: _isLoading

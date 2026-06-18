@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/utils/snackbar_helper.dart';
 import '../layout/student_layout.dart';
+import 'student_dashboard.dart';
 import 'package:alpha_desktop_flutter/core/constants/api_constants.dart';
 
 class FeedbacksPage extends StatefulWidget {
@@ -314,6 +315,7 @@ class _FeedbacksPageState extends State<FeedbacksPage> {
     final theme = Theme.of(context);
     return StudentLayout(
       title: 'Feedbacks',
+      onBackPressed: () => Navigator.pop(context),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         floatingActionButton: FloatingActionButton.extended(
