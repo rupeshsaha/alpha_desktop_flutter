@@ -188,24 +188,17 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 30,
-                          offset: const Offset(0, 15),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(24),
                     ),
                     child: Image.asset(
                       'assets/images/logo.png',
-                      height: 64,
-                      width: 64,
+                      height: 140,
+                      width: 140,
                       fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Icon(Icons.school, size: 48, color: primaryColor),
+                      errorBuilder: (context, error, stackTrace) => Icon(Icons.school, size: 80, color: primaryColor),
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -234,7 +227,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 16),
                   _buildFeatureRow(Icons.insights_rounded, 'In-Depth Performance Analytics'),
                   const SizedBox(height: 16),
-                  _buildFeatureRow(Icons.laptop_chromebook_rounded, 'Interactive Live Classes'),
+                  _buildFeatureRow(Icons.laptop_chromebook_rounded, 'Interactive Online Exam'),
                 ],
               ),
             ),
@@ -264,20 +257,13 @@ class _LoginPageState extends State<LoginPage> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(24),
             ),
             child: Image.asset(
               'assets/images/logo.png',
-              height: 64,
-              width: 64,
-              errorBuilder: (context, error, stackTrace) => Icon(Icons.school, size: 48, color: primaryColor),
+              height: 140,
+              width: 140,
+              errorBuilder: (context, error, stackTrace) => Icon(Icons.school, size: 80, color: primaryColor),
             ),
           ),
           const SizedBox(height: 32),
@@ -332,22 +318,18 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildFormSection(BuildContext context, bool isDark, {bool isMobile = false}) {
     return Center(
       child: Container(
-        constraints: BoxConstraints(maxWidth: isMobile ? 480 : 540),
+        constraints: BoxConstraints(maxWidth: isMobile ? 560 : 680),
         padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 48),
         child: Container(
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              if (!isDark)
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 60,
-                  offset: const Offset(0, 30),
-                ),
-            ],
+            border: Border.all(
+              color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300,
+              width: 1.5,
+            ),
           ),
-          padding: EdgeInsets.all(isMobile ? 32 : 48),
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 40 : 56, vertical: isMobile ? 64 : 88),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

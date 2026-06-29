@@ -90,6 +90,8 @@ class _StudentsPageState extends State<StudentsPage> {
         },
       );
 
+      if (!mounted) return;
+
       if (coursesRes.statusCode == 200 &&
           batchesRes.statusCode == 200 &&
           studentsRes.statusCode == 200 &&
@@ -103,12 +105,12 @@ class _StudentsPageState extends State<StudentsPage> {
         });
       } else {
         setState(() => _isLoading = false);
-        if (mounted) SnackbarHelper.showError(context, 'Failed to fetch data.');
+        SnackbarHelper.showError(context, 'Failed to fetch data.');
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
-      if (mounted)
-        SnackbarHelper.showError(context, 'Network error while fetching data.');
+      SnackbarHelper.showError(context, 'Network error while fetching data.');
     }
   }
 
