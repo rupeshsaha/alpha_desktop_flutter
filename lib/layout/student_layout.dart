@@ -136,6 +136,22 @@ class _StudentLayoutState extends State<StudentLayout> {
             color: theme.scaffoldBackgroundColor,
             border: Border(top: BorderSide(color: theme.dividerColor.withOpacity(0.1))),
           ),
+          child: Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.code, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                const SizedBox(width: 6),
+                Text(
+                  'Developed by Brolytics Technologies',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+              ],
+            ),
           child: Row(
             children: [
               const Expanded(child: SizedBox()),
