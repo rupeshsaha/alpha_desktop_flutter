@@ -8,6 +8,7 @@ import 'student/student_dashboard.dart';
 import 'core/services/settings_service.dart';
 
 import 'core/widgets/app_zoom_scaler.dart';
+import 'splash_screen.dart';
 
 final ThemeController themeController = ThemeController();
 
@@ -30,7 +31,7 @@ void main() async {
     }
   }
 
-  runApp(MyApp(initialPage: initialPage));
+  runApp(MyApp(initialPage: SplashScreen(nextScreen: initialPage)));
 }
 
 class MyApp extends StatelessWidget {
